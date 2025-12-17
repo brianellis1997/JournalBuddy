@@ -126,7 +126,7 @@ class JournalAgent:
             model=self.model,
             messages=messages,
             temperature=1,
-            max_completion_tokens=8192,
+            max_tokens=8192,
             top_p=1,
             stream=False,
         )
@@ -147,7 +147,7 @@ class JournalAgent:
             model=self.model,
             messages=messages,
             temperature=1,
-            max_completion_tokens=8192,
+            max_tokens=8192,
             top_p=1,
             stream=True,
         )

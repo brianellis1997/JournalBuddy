@@ -19,6 +19,7 @@ export default function ChatPage() {
   const [streamingMessage, setStreamingMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const streamingContentRef = useRef('');
 
   useEffect(() => {
     loadSessions();
@@ -102,29 +103,37 @@ export default function ChatPage() {
     setInput('');
     setSending(true);
     setStreamingMessage('');
+    streamingContentRef.current = '';
 
     try {
       await api.sendMessageStream(
         currentSession.id,
         userMessage.content,
         (chunk) => {
-          setStreamingMessage((prev) => prev + chunk);
+          streamingContentRef.current += chunk;
+          setStreamingMessage(streamingContentRef.current);
         },
         () => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: Date.now().toString(),
-              role: 'assistant',
-              content: streamingMessage,
-              created_at: new Date().toISOString(),
-            },
-          ]);
+          const finalContent = streamingContentRef.current;
+          if (finalContent) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: finalContent,
+                created_at: new Date().toISOString(),
+              },
+            ]);
+          }
           setStreamingMessage('');
+          streamingContentRef.current = '';
           setSending(false);
         },
         (error) => {
           console.error('Stream error:', error);
+          setStreamingMessage('');
+          streamingContentRef.current = '';
           setSending(false);
         }
       );
@@ -133,21 +142,6 @@ export default function ChatPage() {
       setSending(false);
     }
   }
-
-  useEffect(() => {
-    if (!sending && streamingMessage) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: streamingMessage,
-          created_at: new Date().toISOString(),
-        },
-      ]);
-      setStreamingMessage('');
-    }
-  }, [sending, streamingMessage]);
 
   if (loading) {
     return <div className="animate-pulse text-gray-500">Loading chat...</div>;
