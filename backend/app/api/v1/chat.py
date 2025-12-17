@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import Database, CurrentUser
 from app.models.chat import ChatSession, ChatMessage
+from app.models.entry import Entry
 from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatMessageCreate, ChatMessageResponse
 from app.agent.graph import journal_agent
 
@@ -134,6 +135,20 @@ async def send_message(
         for msg in session.messages
     ]
 
+    entry_context = None
+    if session.entry_id:
+        entry_result = await db.execute(
+            select(Entry).where(Entry.id == session.entry_id)
+        )
+        entry = entry_result.scalar_one_or_none()
+        if entry:
+            entry_context = {
+                "title": entry.title,
+                "content": entry.content,
+                "mood": entry.mood,
+                "created_at": entry.created_at.strftime("%B %d, %Y"),
+            }
+
     async def generate():
         full_response = ""
         try:
@@ -142,6 +157,7 @@ async def send_message(
                 str(current_user.id),
                 message_in.content,
                 chat_history,
+                entry_context=entry_context,
             ):
                 full_response += chunk
                 yield f"data: {json.dumps({'content': chunk})}\n\n"
@@ -202,11 +218,26 @@ async def send_message_sync(
         for msg in session.messages
     ]
 
+    entry_context = None
+    if session.entry_id:
+        entry_result = await db.execute(
+            select(Entry).where(Entry.id == session.entry_id)
+        )
+        entry = entry_result.scalar_one_or_none()
+        if entry:
+            entry_context = {
+                "title": entry.title,
+                "content": entry.content,
+                "mood": entry.mood,
+                "created_at": entry.created_at.strftime("%B %d, %Y"),
+            }
+
     response_content = await journal_agent.chat(
         db,
         str(current_user.id),
         message_in.content,
         chat_history,
+        entry_context=entry_context,
     )
 
     assistant_message = ChatMessage(

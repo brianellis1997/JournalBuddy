@@ -21,7 +21,24 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingContentRef = useRef('');
-  const { isRecording, isProcessing, startRecording, stopRecording, cancelRecording, error: voiceError } = useVoiceRecording();
+  const { isRecording, isProcessing, amplitude, startRecording, stopRecording, cancelRecording, error: voiceError } = useVoiceRecording();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function adjustTextareaHeight() {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (input.trim() && !sending && currentSession) {
+        sendMessage(e as unknown as React.FormEvent);
+      }
+    }
+  }
 
   async function handleVoiceToggle() {
     if (isRecording) {
@@ -281,24 +298,28 @@ export default function ChatPage() {
               {voiceError && (
                 <div className="text-sm text-red-500 mb-2">{voiceError}</div>
               )}
-              <div className="flex gap-2">
-                <input
-                  type="text"
+              <div className="flex gap-2 items-end">
+                <textarea
+                  ref={textareaRef}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={isRecording ? 'Recording... click mic to stop' : 'Type your message or use voice input...'}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    adjustTextareaHeight();
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder={isRecording ? 'Recording... click mic to stop' : 'Type your message or use voice input... (Enter to send, Shift+Enter for new line)'}
                   className={cn(
-                    'flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500',
+                    'flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none min-h-[42px] max-h-[150px]',
                     isRecording ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   )}
                   disabled={sending || isRecording || isProcessing}
+                  rows={1}
                 />
                 <Button
                   type="button"
                   variant={isRecording ? 'danger' : 'outline'}
                   onClick={handleVoiceToggle}
                   disabled={sending || isProcessing}
-                  className={cn(isRecording && 'animate-pulse')}
                 >
                   {isProcessing ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -314,6 +335,25 @@ export default function ChatPage() {
               </div>
               {isRecording && (
                 <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-0.5 h-6">
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const threshold = (i + 1) / 5;
+                      const isActive = amplitude >= threshold * 0.5;
+                      const height = 8 + (i * 3);
+                      return (
+                        <div
+                          key={i}
+                          className={cn(
+                            'w-1 rounded-full transition-all duration-75',
+                            isActive ? 'bg-red-500' : 'bg-gray-300'
+                          )}
+                          style={{
+                            height: isActive ? `${height + amplitude * 10}px` : `${height}px`,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
                   <span className="text-sm text-red-500">Recording...</span>
                   <button
                     type="button"

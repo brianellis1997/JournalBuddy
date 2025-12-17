@@ -1,11 +1,14 @@
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from groq import AsyncGroq
+import logging
 
 from app.config import settings
 from app.services.embedding import embedding_service
 from app.services.vector_search import search_by_text
 from app.crud.goal import goal_crud
 from app.crud.entry import entry_crud
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are JournalBuddy, a thoughtful and empathetic AI journaling companion. Your role is to:
 
@@ -33,6 +36,9 @@ class JournalAgent:
         self.model = settings.groq_model
 
     async def get_context(self, db, user_id: str, user_message: str) -> dict:
+        from uuid import UUID
+        user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+
         context = {
             "similar_entries": [],
             "goals": [],
@@ -43,36 +49,48 @@ class JournalAgent:
             context["similar_entries"] = await search_by_text(
                 db, user_message, user_id, embedding_service, limit=3
             )
-        except Exception:
-            pass
+            logger.info(f"Found {len(context['similar_entries'])} similar entries")
+        except Exception as e:
+            logger.error(f"Error fetching similar entries: {e}")
 
         try:
-            goals = await goal_crud.get_multi(db, user_id, status="active")
+            goals = await goal_crud.get_multi(db, user_uuid, status="active")
             context["goals"] = [
                 {"title": g.title, "description": g.description}
                 for g in goals[:5]
             ]
-        except Exception:
-            pass
+            logger.info(f"Found {len(context['goals'])} goals")
+        except Exception as e:
+            logger.error(f"Error fetching goals: {e}")
 
         try:
-            entries = await entry_crud.get_recent(db, user_id, days=7, limit=3)
+            entries = await entry_crud.get_recent(db, user_uuid, days=7, limit=3)
             context["recent_entries"] = [
                 {
                     "title": e.title,
-                    "content": e.content[:150] + "..." if len(e.content) > 150 else e.content,
+                    "content": e.content[:1000] + "..." if len(e.content) > 1000 else e.content,
                     "mood": e.mood,
                     "date": e.created_at.strftime("%B %d"),
                 }
                 for e in entries
             ]
-        except Exception:
-            pass
+            logger.info(f"Found {len(context['recent_entries'])} recent entries")
+        except Exception as e:
+            logger.error(f"Error fetching recent entries: {e}")
 
         return context
 
-    def build_context_message(self, context: dict) -> str:
+    def build_context_message(self, context: dict, entry_context: Optional[dict] = None) -> str:
         parts = []
+
+        if entry_context:
+            entry_text = f"The user is discussing this specific journal entry:\n"
+            entry_text += f"Title: {entry_context.get('title', 'Untitled')}\n"
+            entry_text += f"Date: {entry_context.get('created_at', 'Unknown')}\n"
+            if entry_context.get('mood'):
+                entry_text += f"Mood: {entry_context['mood']}\n"
+            entry_text += f"Content:\n{entry_context.get('content', '')}"
+            parts.append(entry_text)
 
         if context["goals"]:
             goals_text = "\n".join(
@@ -82,15 +100,15 @@ class JournalAgent:
             parts.append(f"User's active goals:\n{goals_text}")
 
         if context["similar_entries"]:
-            entries_text = "\n".join(
-                f"- On {e.get('created_at', 'unknown date')[:10]}: \"{e['content'][:100]}...\""
+            entries_text = "\n\n".join(
+                f"Entry from {e.get('created_at', 'unknown date')[:10]}:\n{e['content']}"
                 for e in context["similar_entries"]
             )
             parts.append(f"Related past journal entries:\n{entries_text}")
 
         if context["recent_entries"]:
-            recent_text = "\n".join(
-                f"- {e['date']}: \"{e['content'][:80]}...\" (mood: {e.get('mood', 'not specified')})"
+            recent_text = "\n\n".join(
+                f"Entry from {e['date']} (mood: {e.get('mood', 'not specified')}):\n{e['content']}"
                 for e in context["recent_entries"]
             )
             parts.append(f"Recent journal entries:\n{recent_text}")
@@ -117,9 +135,10 @@ class JournalAgent:
         user_id: str,
         user_message: str,
         chat_history: list,
+        entry_context: Optional[dict] = None,
     ) -> str:
         context = await self.get_context(db, user_id, user_message)
-        context_message = self.build_context_message(context)
+        context_message = self.build_context_message(context, entry_context)
         messages = self._build_messages(context_message, chat_history, user_message)
 
         completion = await self.client.chat.completions.create(
@@ -138,9 +157,11 @@ class JournalAgent:
         user_id: str,
         user_message: str,
         chat_history: list,
+        entry_context: Optional[dict] = None,
     ) -> AsyncGenerator[str, None]:
         context = await self.get_context(db, user_id, user_message)
-        context_message = self.build_context_message(context)
+        context_message = self.build_context_message(context, entry_context)
+        logger.info(f"Context message length: {len(context_message)}")
         messages = self._build_messages(context_message, chat_history, user_message)
 
         stream = await self.client.chat.completions.create(

@@ -11,6 +11,31 @@ interface VoiceRecorderProps {
   disabled?: boolean;
 }
 
+function AmplitudeVisualizer({ amplitude }: { amplitude: number }) {
+  const bars = 5;
+  return (
+    <div className="flex items-center gap-0.5 h-6">
+      {Array.from({ length: bars }).map((_, i) => {
+        const threshold = (i + 1) / bars;
+        const isActive = amplitude >= threshold * 0.5;
+        const height = 8 + (i * 3);
+        return (
+          <div
+            key={i}
+            className={cn(
+              'w-1 rounded-full transition-all duration-75',
+              isActive ? 'bg-red-500' : 'bg-gray-300'
+            )}
+            style={{
+              height: isActive ? `${height + amplitude * 10}px` : `${height}px`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function VoiceRecorder({
   onTranscription,
   className,
@@ -19,6 +44,7 @@ export function VoiceRecorder({
   const {
     isRecording,
     isProcessing,
+    amplitude,
     startRecording,
     stopRecording,
     cancelRecording,
@@ -44,10 +70,6 @@ export function VoiceRecorder({
         size="sm"
         onClick={handleToggle}
         disabled={disabled || isProcessing}
-        className={cn(
-          'relative',
-          isRecording && 'animate-pulse'
-        )}
       >
         {isProcessing ? (
           <>
@@ -57,7 +79,7 @@ export function VoiceRecorder({
         ) : isRecording ? (
           <>
             <Square className="w-4 h-4 mr-2" />
-            Stop Recording
+            Stop
           </>
         ) : (
           <>
@@ -67,13 +89,16 @@ export function VoiceRecorder({
         )}
       </Button>
       {isRecording && (
-        <button
-          type="button"
-          onClick={cancelRecording}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          Cancel
-        </button>
+        <>
+          <AmplitudeVisualizer amplitude={amplitude} />
+          <button
+            type="button"
+            onClick={cancelRecording}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Cancel
+          </button>
+        </>
       )}
       {error && <span className="text-sm text-red-500">{error}</span>}
     </div>

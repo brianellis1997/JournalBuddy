@@ -1,13 +1,18 @@
 from typing import List, Optional
 from uuid import UUID
+import logging
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+from sqlalchemy import select
 
 from app.api.deps import Database, CurrentUser
 from app.crud.entry import entry_crud
 from app.schemas.entry import EntryCreate, EntryUpdate, EntryResponse, EntryListResponse, SimilarEntryResponse
 from app.services.embedding import embedding_service
 from app.services.vector_search import search_similar_entries
+from app.core.database import async_session_maker
+from app.models.entry import Entry
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -39,18 +44,92 @@ async def create_entry(
     background_tasks: BackgroundTasks,
 ):
     entry = await entry_crud.create(db, entry_in, current_user.id)
-    background_tasks.add_task(generate_entry_embedding, db, entry.id, entry.content)
+    background_tasks.add_task(generate_entry_embedding, entry.id, entry.content)
     return entry
 
 
-async def generate_entry_embedding(db, entry_id: UUID, content: str):
+async def generate_entry_embedding(entry_id: UUID, content: str):
+    logger.info(f"Generating embedding for entry {entry_id}")
     try:
         embedding = await embedding_service.generate_embedding(content)
-        entry = await entry_crud.get_by_id(db, entry_id, entry_id)
-        if entry:
-            await entry_crud.update_embedding(db, entry, embedding)
-    except Exception:
-        pass
+        logger.info(f"Generated embedding of length {len(embedding)} for entry {entry_id}")
+        async with async_session_maker() as db:
+            result = await db.execute(
+                select(Entry).where(Entry.id == entry_id)
+            )
+            entry = result.scalar_one_or_none()
+            if entry:
+                entry.embedding = embedding
+                await db.commit()
+                logger.info(f"Saved embedding for entry {entry_id}")
+            else:
+                logger.warning(f"Entry {entry_id} not found when saving embedding")
+    except Exception as e:
+        logger.error(f"Error generating embedding for entry {entry_id}: {e}")
+
+
+@router.get("/debug/embedding-status")
+async def get_embedding_status(
+    current_user: CurrentUser,
+    db: Database,
+):
+    result = await db.execute(
+        select(Entry.id, Entry.title, Entry.embedding).where(Entry.user_id == current_user.id)
+    )
+    entries = result.all()
+
+    status_list = []
+    for entry in entries:
+        has_embedding = entry.embedding is not None
+        embedding_length = len(entry.embedding) if has_embedding else 0
+        status_list.append({
+            "id": str(entry.id),
+            "title": entry.title or "Untitled",
+            "has_embedding": has_embedding,
+            "embedding_length": embedding_length,
+        })
+
+    total = len(status_list)
+    with_embeddings = sum(1 for s in status_list if s["has_embedding"])
+
+    return {
+        "total_entries": total,
+        "entries_with_embeddings": with_embeddings,
+        "entries_without_embeddings": total - with_embeddings,
+        "entries": status_list,
+    }
+
+
+@router.post("/debug/regenerate-embeddings")
+async def regenerate_all_embeddings(
+    current_user: CurrentUser,
+    db: Database,
+):
+    result = await db.execute(
+        select(Entry).where(Entry.user_id == current_user.id)
+    )
+    entries = result.scalars().all()
+
+    regenerated = 0
+    errors = []
+
+    for entry in entries:
+        try:
+            embedding = await embedding_service.generate_embedding(entry.content)
+            entry.embedding = embedding
+            regenerated += 1
+            logger.info(f"Regenerated embedding for entry {entry.id}")
+        except Exception as e:
+            errors.append({"entry_id": str(entry.id), "error": str(e)})
+            logger.error(f"Error regenerating embedding for entry {entry.id}: {e}")
+
+    await db.commit()
+
+    return {
+        "total_entries": len(entries),
+        "regenerated": regenerated,
+        "errors": errors,
+    }
 
 
 @router.get("/{entry_id}", response_model=EntryResponse)
@@ -86,7 +165,7 @@ async def update_entry(
     entry = await entry_crud.update(db, entry, entry_in)
 
     if entry_in.content:
-        background_tasks.add_task(generate_entry_embedding, db, entry.id, entry.content)
+        background_tasks.add_task(generate_entry_embedding, entry.id, entry.content)
 
     return entry
 
