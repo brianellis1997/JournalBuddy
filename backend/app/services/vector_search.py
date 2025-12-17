@@ -53,7 +53,7 @@ async def search_similar_entries(
         {
             "id": str(row.id),
             "title": row.title,
-            "content": row.content[:1500] + "..." if len(row.content) > 1500 else row.content,
+            "content": row.content,
             "mood": row.mood,
             "created_at": row.created_at.isoformat(),
             "similarity": float(row.similarity),

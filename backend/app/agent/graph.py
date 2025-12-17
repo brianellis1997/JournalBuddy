@@ -5,6 +5,7 @@ import logging
 from app.config import settings
 from app.services.embedding import embedding_service
 from app.services.vector_search import search_by_text
+from app.services.token_manager import token_manager
 from app.crud.goal import goal_crud
 from app.crud.entry import entry_crud
 
@@ -68,7 +69,7 @@ class JournalAgent:
             context["recent_entries"] = [
                 {
                     "title": e.title,
-                    "content": e.content[:1000] + "..." if len(e.content) > 1000 else e.content,
+                    "content": e.content,
                     "mood": e.mood,
                     "date": e.created_at.strftime("%B %d"),
                 }
@@ -80,16 +81,37 @@ class JournalAgent:
 
         return context
 
-    def build_context_message(self, context: dict, entry_context: Optional[dict] = None) -> str:
+    def build_context_message(
+        self,
+        context: dict,
+        entry_context: Optional[dict] = None,
+        chat_history_tokens: int = 0,
+        user_message_tokens: int = 0,
+    ) -> str:
+        system_tokens = token_manager.count_tokens(SYSTEM_PROMPT)
+        budget = token_manager.allocate_context_budget(
+            system_prompt_tokens=system_tokens,
+            chat_history_tokens=chat_history_tokens,
+            user_message_tokens=user_message_tokens,
+        )
+
         parts = []
 
         if entry_context:
+            content = entry_context.get('content', '')
+            if token_manager.count_tokens(content) > budget["entry_context"]:
+                content = token_manager.truncate_to_tokens(
+                    content,
+                    budget["entry_context"],
+                    suffix="\n[Entry truncated...]"
+                )
+
             entry_text = f"The user is discussing this specific journal entry:\n"
             entry_text += f"Title: {entry_context.get('title', 'Untitled')}\n"
             entry_text += f"Date: {entry_context.get('created_at', 'Unknown')}\n"
             if entry_context.get('mood'):
                 entry_text += f"Mood: {entry_context['mood']}\n"
-            entry_text += f"Content:\n{entry_context.get('content', '')}"
+            entry_text += f"Content:\n{content}"
             parts.append(entry_text)
 
         if context["goals"]:
@@ -97,37 +119,85 @@ class JournalAgent:
                 f"- {g['title']}" + (f": {g['description']}" if g.get('description') else "")
                 for g in context["goals"]
             )
-            parts.append(f"User's active goals:\n{goals_text}")
+            truncated_goals = token_manager.truncate_to_tokens(
+                goals_text, budget["goals"], suffix="\n[More goals...]"
+            )
+            parts.append(f"User's active goals:\n{truncated_goals}")
 
         if context["similar_entries"]:
-            entries_text = "\n\n".join(
-                f"Entry from {e.get('created_at', 'unknown date')[:10]}:\n{e['content']}"
-                for e in context["similar_entries"]
+            truncated_similar = token_manager.truncate_entries(
+                context["similar_entries"],
+                budget["similar_entries"],
+                content_key="content",
             )
-            parts.append(f"Related past journal entries:\n{entries_text}")
+            if truncated_similar:
+                entries_text = "\n\n".join(
+                    f"Entry from {e.get('created_at', 'unknown date')[:10]}:\n{e['content']}"
+                    for e in truncated_similar
+                )
+                parts.append(f"Related past journal entries:\n{entries_text}")
 
         if context["recent_entries"]:
-            recent_text = "\n\n".join(
-                f"Entry from {e['date']} (mood: {e.get('mood', 'not specified')}):\n{e['content']}"
-                for e in context["recent_entries"]
+            truncated_recent = token_manager.truncate_entries(
+                context["recent_entries"],
+                budget["recent_entries"],
+                content_key="content",
             )
-            parts.append(f"Recent journal entries:\n{recent_text}")
+            if truncated_recent:
+                recent_text = "\n\n".join(
+                    f"Entry from {e['date']} (mood: {e.get('mood', 'not specified')}):\n{e['content']}"
+                    for e in truncated_recent
+                )
+                parts.append(f"Recent journal entries:\n{recent_text}")
 
         if parts:
-            return "Here's some context about this user:\n\n" + "\n\n".join(parts)
+            context_msg = "Here's some context about this user:\n\n" + "\n\n".join(parts)
+            logger.info(f"Built context message: {token_manager.count_tokens(context_msg)} tokens")
+            return context_msg
         return ""
 
-    def _build_messages(self, context_message: str, chat_history: list, user_message: str) -> list:
+    def _build_messages(
+        self,
+        context_message: str,
+        chat_history: list,
+        user_message: str,
+        max_history_tokens: int = 16000,
+    ) -> list:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
         if context_message:
             messages.append({"role": "system", "content": context_message})
 
-        for msg in chat_history[-10:]:
-            messages.append({"role": msg["role"], "content": msg["content"]})
+        if chat_history:
+            truncated_history = self._truncate_chat_history(chat_history, max_history_tokens)
+            for msg in truncated_history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
 
         messages.append({"role": "user", "content": user_message})
+
+        total_tokens = token_manager.count_messages_tokens(messages)
+        logger.info(f"Total message tokens: {total_tokens}")
+
         return messages
+
+    def _truncate_chat_history(self, chat_history: list, max_tokens: int) -> list:
+        if not chat_history:
+            return []
+
+        total_tokens = 0
+        result = []
+
+        for msg in reversed(chat_history):
+            msg_tokens = token_manager.count_tokens(msg.get("content", "")) + 4
+            if total_tokens + msg_tokens > max_tokens:
+                break
+            result.insert(0, msg)
+            total_tokens += msg_tokens
+
+        if len(result) < len(chat_history):
+            logger.info(f"Truncated chat history from {len(chat_history)} to {len(result)} messages ({total_tokens} tokens)")
+
+        return result
 
     async def chat(
         self,
@@ -138,7 +208,19 @@ class JournalAgent:
         entry_context: Optional[dict] = None,
     ) -> str:
         context = await self.get_context(db, user_id, user_message)
-        context_message = self.build_context_message(context, entry_context)
+
+        chat_history_tokens = sum(
+            token_manager.count_tokens(msg.get("content", "")) + 4
+            for msg in chat_history
+        )
+        user_message_tokens = token_manager.count_tokens(user_message)
+
+        context_message = self.build_context_message(
+            context,
+            entry_context,
+            chat_history_tokens=chat_history_tokens,
+            user_message_tokens=user_message_tokens,
+        )
         messages = self._build_messages(context_message, chat_history, user_message)
 
         completion = await self.client.chat.completions.create(
@@ -160,8 +242,20 @@ class JournalAgent:
         entry_context: Optional[dict] = None,
     ) -> AsyncGenerator[str, None]:
         context = await self.get_context(db, user_id, user_message)
-        context_message = self.build_context_message(context, entry_context)
-        logger.info(f"Context message length: {len(context_message)}")
+
+        chat_history_tokens = sum(
+            token_manager.count_tokens(msg.get("content", "")) + 4
+            for msg in chat_history
+        )
+        user_message_tokens = token_manager.count_tokens(user_message)
+
+        context_message = self.build_context_message(
+            context,
+            entry_context,
+            chat_history_tokens=chat_history_tokens,
+            user_message_tokens=user_message_tokens,
+        )
+        logger.info(f"Context message: {token_manager.count_tokens(context_message)} tokens")
         messages = self._build_messages(context_message, chat_history, user_message)
 
         stream = await self.client.chat.completions.create(
