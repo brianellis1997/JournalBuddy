@@ -55,13 +55,13 @@ class GoalCRUD:
 
     async def count_by_user(self, db: AsyncSession, user_id: UUID) -> int:
         result = await db.execute(
-            select(func.count()).where(Goal.user_id == user_id)
+            select(func.count(Goal.id)).where(Goal.user_id == user_id)
         )
         return result.scalar() or 0
 
     async def count_by_status(self, db: AsyncSession, user_id: UUID, status: str) -> int:
         result = await db.execute(
-            select(func.count()).where(
+            select(func.count(Goal.id)).where(
                 Goal.user_id == user_id,
                 Goal.status == status,
             )

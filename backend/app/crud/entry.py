@@ -82,14 +82,14 @@ class EntryCRUD:
 
     async def count_by_user(self, db: AsyncSession, user_id: UUID) -> int:
         result = await db.execute(
-            select(func.count()).where(Entry.user_id == user_id)
+            select(func.count(Entry.id)).where(Entry.user_id == user_id)
         )
         return result.scalar() or 0
 
     async def count_this_week(self, db: AsyncSession, user_id: UUID) -> int:
         week_ago = datetime.utcnow() - timedelta(days=7)
         result = await db.execute(
-            select(func.count()).where(
+            select(func.count(Entry.id)).where(
                 Entry.user_id == user_id,
                 Entry.created_at >= week_ago,
             )
@@ -99,7 +99,7 @@ class EntryCRUD:
     async def count_this_month(self, db: AsyncSession, user_id: UUID) -> int:
         month_ago = datetime.utcnow() - timedelta(days=30)
         result = await db.execute(
-            select(func.count()).where(
+            select(func.count(Entry.id)).where(
                 Entry.user_id == user_id,
                 Entry.created_at >= month_ago,
             )
