@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Send, Plus, Trash2 } from 'lucide-react';
+import { Send, Plus, Trash2, Mic, Square, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 import type { ChatSession, ChatMessage } from '@/types';
 
 export default function ChatPage() {
@@ -20,6 +21,18 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingContentRef = useRef('');
+  const { isRecording, isProcessing, startRecording, stopRecording, cancelRecording, error: voiceError } = useVoiceRecording();
+
+  async function handleVoiceToggle() {
+    if (isRecording) {
+      const text = await stopRecording();
+      if (text) {
+        setInput((prev) => (prev ? `${prev} ${text}` : text));
+      }
+    } else {
+      await startRecording();
+    }
+  }
 
   useEffect(() => {
     loadSessions();
@@ -265,19 +278,52 @@ export default function ChatPage() {
             </div>
 
             <form onSubmit={sendMessage} className="p-4 border-t">
+              {voiceError && (
+                <div className="text-sm text-red-500 mb-2">{voiceError}</div>
+              )}
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  disabled={sending}
+                  placeholder={isRecording ? 'Recording... click mic to stop' : 'Type your message or use voice input...'}
+                  className={cn(
+                    'flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500',
+                    isRecording ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  )}
+                  disabled={sending || isRecording || isProcessing}
                 />
-                <Button type="submit" disabled={sending || !input.trim()}>
+                <Button
+                  type="button"
+                  variant={isRecording ? 'danger' : 'outline'}
+                  onClick={handleVoiceToggle}
+                  disabled={sending || isProcessing}
+                  className={cn(isRecording && 'animate-pulse')}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isRecording ? (
+                    <Square className="w-4 h-4" />
+                  ) : (
+                    <Mic className="w-4 h-4" />
+                  )}
+                </Button>
+                <Button type="submit" disabled={sending || !input.trim() || isRecording || isProcessing}>
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
+              {isRecording && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-sm text-red-500">Recording...</span>
+                  <button
+                    type="button"
+                    onClick={cancelRecording}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </form>
           </>
         )}

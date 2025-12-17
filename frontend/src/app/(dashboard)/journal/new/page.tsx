@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Card, CardContent } from '@/components/ui/Card';
+import { VoiceRecorder } from '@/components/ui/VoiceRecorder';
 import { cn } from '@/lib/utils';
 
 const moods = [
@@ -109,11 +110,19 @@ export default function NewEntryPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                What's on your mind?
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  What's on your mind?
+                </label>
+                <VoiceRecorder
+                  onTranscription={(text) => {
+                    setContent((prev) => (prev ? `${prev}\n\n${text}` : text));
+                  }}
+                  disabled={saving}
+                />
+              </div>
               <Textarea
-                placeholder="Write your thoughts, feelings, or anything you want to remember..."
+                placeholder="Write your thoughts, feelings, or anything you want to remember... or use voice input above"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={10}

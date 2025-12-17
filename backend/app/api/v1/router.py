@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, users, entries, goals, chat, metrics
+from app.api.v1 import auth, users, entries, goals, chat, metrics, transcribe
 
 api_router = APIRouter()
 
@@ -10,3 +10,4 @@ api_router.include_router(entries.router, prefix="/entries", tags=["entries"])
 api_router.include_router(goals.router, prefix="/goals", tags=["goals"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(metrics.router, prefix="/metrics", tags=["metrics"])
+api_router.include_router(transcribe.router, prefix="/transcribe", tags=["transcribe"])
