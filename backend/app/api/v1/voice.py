@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.security import get_user_from_token
 from app.services.deepgram_service import DeepgramStreamManager
 from app.services.cartesia_service import CartesiaStreamManager
-from app.agent.graph import journal_agent
+from app.agent.voice_agent import voice_agent
 from app.crud.chat import chat_crud
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,7 @@ class VoiceChatSession:
         self._last_interrupt_time: float = 0
         self._interrupt_cooldown: float = 2.0
         self.db_session_id: Optional[UUID] = None
+        self.should_end_conversation = False
 
     async def create_db_session(self):
         session = await chat_crud.create_session(
@@ -43,12 +44,16 @@ class VoiceChatSession:
 
     async def save_message(self, role: str, content: str):
         if self.db_session_id and content.strip():
-            await chat_crud.add_message(
-                self.db,
-                self.db_session_id,
-                role,
-                content,
-            )
+            try:
+                await chat_crud.add_message(
+                    self.db,
+                    self.db_session_id,
+                    role,
+                    content,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save message, rolling back: {e}")
+                await self.db.rollback()
 
     async def send_message(self, msg_type: str, data: dict = None):
         try:
@@ -93,16 +98,22 @@ class VoiceChatSession:
             self.cartesia.reset()
 
             full_response = ""
+            end_signal_received = False
 
             async def text_generator():
-                nonlocal full_response
-                async for chunk in journal_agent.voice_chat_stream(
+                nonlocal full_response, end_signal_received
+                async for chunk in voice_agent.chat_stream(
                     self.db,
                     self.user_id,
+                    str(self.db_session_id) if self.db_session_id else "",
                     user_message,
                     self.chat_history[:-1],
                 ):
                     if self._cancelled:
+                        return
+                    if chunk == "\n__END_CONVERSATION__":
+                        end_signal_received = True
+                        self.should_end_conversation = True
                         return
                     full_response += chunk
                     await self.send_message("assistant_text", {"text": chunk, "is_final": False})
@@ -125,8 +136,15 @@ class VoiceChatSession:
                 await self.send_message("assistant_text", {"text": "", "is_final": True})
                 await self.send_message("assistant_done")
 
+                if end_signal_received:
+                    await self.send_message("conversation_ended")
+
         except Exception as e:
             logger.error(f"Error generating response: {e}")
+            try:
+                await self.db.rollback()
+            except Exception:
+                pass
             await self.send_message("error", {"message": str(e)})
         finally:
             self.is_speaking = False
@@ -144,6 +162,11 @@ class VoiceChatSession:
                 await self.current_generation_task
             except asyncio.CancelledError:
                 pass
+
+        try:
+            await self.db.rollback()
+        except Exception as e:
+            logger.debug(f"Rollback during interrupt: {e}")
 
         self.is_speaking = False
         await self.send_message("interrupted")

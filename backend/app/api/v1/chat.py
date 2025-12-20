@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import Database, CurrentUser
 from app.models.chat import ChatSession, ChatMessage
 from app.models.entry import Entry
-from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatMessageCreate, ChatMessageResponse
+from app.schemas.chat import ChatSessionCreate, ChatSessionResponse, ChatMessageCreate, ChatMessageResponse, VoiceSessionResponse
 from app.agent.graph import journal_agent
 
 router = APIRouter()
@@ -34,6 +34,37 @@ async def list_chat_sessions(
     )
     sessions = result.scalars().all()
     return sessions
+
+
+@router.get("/voice-sessions", response_model=List[VoiceSessionResponse])
+async def list_voice_sessions(
+    current_user: CurrentUser,
+    db: Database,
+    limit: int = 20,
+):
+    result = await db.execute(
+        select(ChatSession)
+        .where(
+            ChatSession.user_id == current_user.id,
+            ChatSession.session_type == "voice",
+        )
+        .options(selectinload(ChatSession.messages))
+        .order_by(ChatSession.created_at.desc())
+        .limit(limit)
+    )
+    sessions = result.scalars().all()
+    return [
+        VoiceSessionResponse(
+            id=s.id,
+            session_type=s.session_type,
+            summary=s.summary,
+            key_topics=s.key_topics,
+            goal_updates=s.goal_updates,
+            created_at=s.created_at,
+            message_count=len(s.messages),
+        )
+        for s in sessions
+    ]
 
 
 @router.post("/sessions", response_model=ChatSessionResponse, status_code=status.HTTP_201_CREATED)

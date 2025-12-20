@@ -15,16 +15,18 @@ interface UseVoiceChatOptions {
   onAssistantText?: (text: string, isFinal: boolean) => void;
   onStateChange?: (state: VoiceChatState) => void;
   onError?: (error: string) => void;
+  onConversationEnd?: () => void;
 }
 
 export function useVoiceChat(options: UseVoiceChatOptions = {}) {
-  const { onTranscript, onAssistantText, onStateChange, onError } = options;
+  const { onTranscript, onAssistantText, onStateChange, onError, onConversationEnd } = options;
   const { token } = useAuthStore();
 
   const [state, setState] = useState<VoiceChatState>('disconnected');
   const [isConnected, setIsConnected] = useState(false);
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [assistantText, setAssistantText] = useState('');
+  const [conversationEnded, setConversationEnded] = useState(false);
 
   const [amplitude, setAmplitude] = useState(0);
 
@@ -183,13 +185,18 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
           onError?.(message.data?.message as string || 'Unknown error');
           break;
 
+        case 'conversation_ended':
+          setConversationEnded(true);
+          onConversationEnd?.();
+          break;
+
         case 'pong':
           break;
       }
     } catch (e) {
       console.error('Failed to parse WebSocket message:', e);
     }
-  }, [onTranscript, onAssistantText, onError, updateState, processAudioQueue, stopAudioPlayback]);
+  }, [onTranscript, onAssistantText, onError, onConversationEnd, updateState, processAudioQueue, stopAudioPlayback]);
 
   const connect = useCallback(async () => {
     if (!token) {
@@ -332,6 +339,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
     currentTranscript,
     assistantText,
     amplitude,
+    conversationEnded,
     start,
     disconnect,
     interrupt,

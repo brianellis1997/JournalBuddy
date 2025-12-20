@@ -51,6 +51,7 @@ export function VoiceChatInterface() {
     state,
     isConnected,
     amplitude,
+    conversationEnded,
     start,
     disconnect,
     interrupt,
@@ -85,6 +86,11 @@ export function VoiceChatInterface() {
     onError: (errorMsg) => {
       setError(errorMsg);
       setTimeout(() => setError(null), 5000);
+    },
+    onConversationEnd: () => {
+      setTimeout(() => {
+        disconnect();
+      }, 3000);
     },
   });
 
@@ -227,16 +233,17 @@ export function VoiceChatInterface() {
       {isConnected && (
         <div className="p-4 border-t bg-gray-50">
           <div className="flex items-center justify-center gap-4">
-            {(state === 'listening' || state === 'idle') && (
+            {(state === 'listening' || state === 'idle') && !conversationEnded && (
               <AmplitudeVisualizer amplitude={amplitude} />
             )}
             <p className="text-sm text-gray-500">
-              {state === 'listening' && 'Listening to you...'}
-              {state === 'thinking' && 'JournalBuddy is thinking...'}
-              {state === 'speaking' && 'JournalBuddy is speaking... (click Interrupt to stop)'}
-              {state === 'idle' && 'Say something to continue the conversation'}
+              {conversationEnded && 'Conversation complete! Disconnecting...'}
+              {!conversationEnded && state === 'listening' && 'Listening to you...'}
+              {!conversationEnded && state === 'thinking' && 'JournalBuddy is thinking...'}
+              {!conversationEnded && state === 'speaking' && 'JournalBuddy is speaking... (click Interrupt to stop)'}
+              {!conversationEnded && state === 'idle' && 'Say something to continue the conversation'}
             </p>
-            {(state === 'listening' || state === 'idle') && (
+            {(state === 'listening' || state === 'idle') && !conversationEnded && (
               <AmplitudeVisualizer amplitude={amplitude} />
             )}
           </div>

@@ -28,6 +28,7 @@ class GoalResponse(BaseModel):
     title: str
     description: Optional[str]
     status: str
+    progress: int = 0
     target_date: Optional[date]
     journaling_schedule: Optional[str]
     created_at: datetime

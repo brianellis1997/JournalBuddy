@@ -15,7 +15,7 @@ class ChatCRUD:
         user_id: UUID,
         session_type: str = "voice",
     ) -> ChatSession:
-        session = ChatSession(user_id=user_id)
+        session = ChatSession(user_id=user_id, session_type=session_type)
         db.add(session)
         await db.commit()
         await db.refresh(session)
@@ -100,6 +100,44 @@ class ChatCRUD:
             .order_by(desc(ChatSession.created_at))
         )
         return list(result.scalars().all())
+
+    async def get_voice_sessions(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        limit: int = 20,
+    ) -> List[ChatSession]:
+        result = await db.execute(
+            select(ChatSession)
+            .options(selectinload(ChatSession.messages))
+            .where(
+                ChatSession.user_id == user_id,
+                ChatSession.session_type == "voice",
+            )
+            .order_by(desc(ChatSession.created_at))
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def update_session_summary(
+        self,
+        db: AsyncSession,
+        session_id: UUID,
+        summary: str,
+        key_topics: str = "",
+        goal_updates: str = "",
+    ) -> Optional[ChatSession]:
+        result = await db.execute(
+            select(ChatSession).where(ChatSession.id == session_id)
+        )
+        session = result.scalar_one_or_none()
+        if session:
+            session.summary = summary
+            session.key_topics = key_topics
+            session.goal_updates = goal_updates
+            await db.commit()
+            await db.refresh(session)
+        return session
 
 
 chat_crud = ChatCRUD()

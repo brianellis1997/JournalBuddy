@@ -26,6 +26,7 @@ export interface Goal {
   title: string;
   description?: string;
   status: 'active' | 'completed' | 'paused' | 'abandoned';
+  progress: number;
   target_date?: string;
   journaling_schedule?: JournalingSchedule;
   created_at: string;
@@ -42,8 +43,22 @@ export interface ChatMessage {
 export interface ChatSession {
   id: string;
   entry_id?: string;
+  session_type?: string;
+  summary?: string;
+  key_topics?: string;
+  goal_updates?: string;
   created_at: string;
   messages: ChatMessage[];
+}
+
+export interface VoiceSession {
+  id: string;
+  session_type: string;
+  summary?: string;
+  key_topics?: string;
+  goal_updates?: string;
+  created_at: string;
+  message_count: number;
 }
 
 export interface Metrics {

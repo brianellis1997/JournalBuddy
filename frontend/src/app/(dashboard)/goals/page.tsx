@@ -141,6 +141,21 @@ export default function GoalsPage() {
                     {goal.description && (
                       <p className="text-sm text-gray-500 mt-1">{goal.description}</p>
                     )}
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                        <span>Progress</span>
+                        <span>{goal.progress}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all duration-300',
+                            goal.progress === 100 ? 'bg-green-500' : 'bg-primary-500'
+                          )}
+                          style={{ width: `${goal.progress}%` }}
+                        />
+                      </div>
+                    </div>
                     {goal.target_date && (
                       <p className="text-xs text-gray-400 mt-2">
                         Target: {new Date(goal.target_date).toLocaleDateString()}
