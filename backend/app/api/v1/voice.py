@@ -30,7 +30,7 @@ class VoiceChatSession:
         self.current_generation_task: Optional[asyncio.Task] = None
         self._cancelled = False
         self._last_interrupt_time: float = 0
-        self._interrupt_cooldown: float = 2.0
+        self._interrupt_cooldown: float = 1.0
         self.db_session_id: Optional[UUID] = None
         self.should_end_conversation = False
 
@@ -100,9 +100,10 @@ class VoiceChatSession:
 
             full_response = ""
             end_signal_received = False
+            has_sent_text = False
 
             async def text_generator():
-                nonlocal full_response, end_signal_received
+                nonlocal full_response, end_signal_received, has_sent_text
                 async for chunk in voice_agent.chat_stream(
                     self.db,
                     self.user_id,
@@ -117,9 +118,11 @@ class VoiceChatSession:
                         end_signal_received = True
                         self.should_end_conversation = True
                         return
-                    full_response += chunk
-                    await self.send_message("assistant_text", {"text": chunk, "is_final": False})
-                    yield chunk
+                    if chunk and chunk.strip():
+                        full_response += chunk
+                        has_sent_text = True
+                        await self.send_message("assistant_text", {"text": chunk, "is_final": False})
+                        yield chunk
 
             await self.send_message("assistant_speaking")
 
@@ -133,9 +136,12 @@ class VoiceChatSession:
                     break
 
             if not self._cancelled:
-                self.chat_history.append({"role": "assistant", "content": full_response})
-                await self.save_message("assistant", full_response)
-                await self.send_message("assistant_text", {"text": "", "is_final": True})
+                if full_response.strip():
+                    self.chat_history.append({"role": "assistant", "content": full_response})
+                    await self.save_message("assistant", full_response)
+
+                if has_sent_text:
+                    await self.send_message("assistant_text", {"text": "", "is_final": True})
                 await self.send_message("assistant_done")
 
                 if end_signal_received:
@@ -182,7 +188,9 @@ class VoiceChatSession:
     async def process_transcripts(self):
         accumulated_transcript = ""
         last_speech_time = asyncio.get_event_loop().time()
-        silence_threshold = 1.8
+        last_process_time = 0.0
+        silence_threshold = 1.5
+        min_process_interval = 0.5
 
         while self.deepgram.is_connected:
             try:
@@ -191,22 +199,19 @@ class VoiceChatSession:
                     timeout=0.1
                 )
 
+                current_time = asyncio.get_event_loop().time()
+
                 if transcript:
-                    last_speech_time = asyncio.get_event_loop().time()
+                    last_speech_time = current_time
 
                     if is_final:
                         accumulated_transcript += " " + transcript
                         accumulated_transcript = accumulated_transcript.strip()
 
-                        await self.send_message("interim_transcript", {
-                            "text": accumulated_transcript,
-                            "is_final": True
-                        })
-                    else:
-                        await self.send_message("interim_transcript", {
-                            "text": accumulated_transcript + " " + transcript,
-                            "is_final": False
-                        })
+                    await self.send_message("interim_transcript", {
+                        "text": (accumulated_transcript + " " + transcript).strip() if not is_final else accumulated_transcript,
+                        "is_final": False
+                    })
 
                     if self.is_speaking:
                         await self.interrupt()
@@ -215,13 +220,14 @@ class VoiceChatSession:
                 current_time = asyncio.get_event_loop().time()
                 time_since_speech = current_time - last_speech_time
                 time_since_interrupt = current_time - self._last_interrupt_time
+                time_since_process = current_time - last_process_time
 
                 if accumulated_transcript and time_since_speech > silence_threshold:
-                    if time_since_interrupt > self._interrupt_cooldown:
+                    if time_since_interrupt > self._interrupt_cooldown and time_since_process > min_process_interval:
+                        logger.info(f"Silence detected, processing: {accumulated_transcript[:50]}...")
                         await self.handle_user_speech_end(accumulated_transcript)
                         accumulated_transcript = ""
-                    else:
-                        logger.debug(f"Waiting for cooldown to complete ({time_since_interrupt:.1f}s / {self._interrupt_cooldown}s)")
+                        last_process_time = current_time
 
             except Exception as e:
                 logger.error(f"Error processing transcripts: {e}")

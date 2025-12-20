@@ -74,7 +74,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
   }, []);
 
   const processAudioQueue = useCallback(async () => {
-    if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
+    if (isPlayingRef.current) return;
 
     isPlayingRef.current = true;
 
@@ -86,6 +86,10 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
     }
 
     isPlayingRef.current = false;
+
+    if (audioQueueRef.current.length > 0) {
+      processAudioQueue();
+    }
   }, [playAudioChunk]);
 
   const stopAudioPlayback = useCallback(() => {
@@ -171,10 +175,12 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
             onAssistantText?.(text, false);
           } else if (isTextFinal) {
             onAssistantText?.('', true);
+            setAssistantText('');
           }
           break;
 
         case 'assistant_done':
+          setAssistantText('');
           updateState('idle');
           break;
 

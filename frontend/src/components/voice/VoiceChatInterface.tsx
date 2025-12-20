@@ -50,6 +50,7 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const assistantTextRef = useRef('');
 
   const {
     state,
@@ -75,16 +76,18 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
     },
     onAssistantText: (text, isFinal) => {
       if (!isFinal) {
-        setCurrentAssistantText(prev => prev + text);
+        assistantTextRef.current += text;
+        setCurrentAssistantText(assistantTextRef.current);
       } else {
-        if (currentAssistantText.trim()) {
+        if (assistantTextRef.current.trim()) {
           setMessages(prev => [...prev, {
             id: Date.now().toString(),
             role: 'assistant',
-            content: currentAssistantText.trim(),
+            content: assistantTextRef.current.trim(),
             timestamp: new Date(),
           }]);
         }
+        assistantTextRef.current = '';
         setCurrentAssistantText('');
       }
     },
@@ -223,17 +226,19 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
                 </div>
               )}
 
-              {(currentAssistantText || state === 'thinking') && (
+              {state === 'thinking' && !currentAssistantText && (
                 <div className="p-4 rounded-xl max-w-[85%] bg-white border border-gray-200 shadow-sm">
-                  {state === 'thinking' && !currentAssistantText ? (
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                  ) : (
-                    <p className="text-gray-800">{currentAssistantText}</p>
-                  )}
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              )}
+
+              {currentAssistantText && (
+                <div className="p-4 rounded-xl max-w-[85%] bg-white border border-gray-200 shadow-sm">
+                  <p className="text-gray-800">{currentAssistantText}</p>
                 </div>
               )}
 

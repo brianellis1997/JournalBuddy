@@ -115,31 +115,34 @@ class CartesiaStreamManager:
         if not self.api_key:
             raise ValueError("Cartesia API key not configured")
 
-        sentence_buffer = ""
-        sentence_endings = ".!?;"
+        buffer = ""
+        sentence_endings = ".!?,"
+        min_chars = 25
 
         async for text_chunk in text_generator:
             if self._cancelled:
                 logger.info("TTS cancelled")
                 return
 
-            sentence_buffer += text_chunk
+            buffer += text_chunk
 
-            while any(ending in sentence_buffer for ending in sentence_endings):
-                for i, char in enumerate(sentence_buffer):
-                    if char in sentence_endings:
-                        sentence = sentence_buffer[: i + 1].strip()
-                        sentence_buffer = sentence_buffer[i + 1 :]
+            last_ending = -1
+            for i, char in enumerate(buffer):
+                if char in sentence_endings:
+                    last_ending = i
 
-                        if sentence:
-                            async for audio_chunk in self._synthesize_sentence(sentence, chunk_size):
-                                if self._cancelled:
-                                    return
-                                yield audio_chunk
-                        break
+            if last_ending >= min_chars:
+                segment = buffer[:last_ending + 1].strip()
+                buffer = buffer[last_ending + 1:]
 
-        if sentence_buffer.strip() and not self._cancelled:
-            async for audio_chunk in self._synthesize_sentence(sentence_buffer.strip(), chunk_size):
+                if segment:
+                    async for audio_chunk in self._synthesize_sentence(segment, chunk_size):
+                        if self._cancelled:
+                            return
+                        yield audio_chunk
+
+        if buffer.strip() and not self._cancelled:
+            async for audio_chunk in self._synthesize_sentence(buffer.strip(), chunk_size):
                 if self._cancelled:
                     return
                 yield audio_chunk
