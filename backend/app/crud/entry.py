@@ -43,7 +43,9 @@ class EntryCRUD:
             user_id=user_id,
             title=entry_in.title,
             content=entry_in.content,
+            transcript=entry_in.transcript,
             mood=entry_in.mood,
+            journal_type=entry_in.journal_type,
         )
         db.add(entry)
         await db.commit()

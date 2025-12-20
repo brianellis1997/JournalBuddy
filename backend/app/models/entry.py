@@ -16,6 +16,7 @@ class Entry(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    transcript: Mapped[str] = mapped_column(Text, nullable=True)
     mood: Mapped[str] = mapped_column(String(20), nullable=True)
     journal_type: Mapped[str] = mapped_column(String(20), nullable=True, index=True)
     embedding = mapped_column(Vector(settings.embedding_dimension), nullable=True)

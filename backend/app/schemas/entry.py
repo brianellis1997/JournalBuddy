@@ -11,6 +11,7 @@ JournalType = Literal["morning", "evening", "freeform"]
 class EntryCreate(BaseModel):
     title: Optional[str] = None
     content: str
+    transcript: Optional[str] = None
     mood: Optional[MoodType] = None
     journal_type: Optional[JournalType] = None
 
@@ -26,6 +27,7 @@ class EntryResponse(BaseModel):
     id: UUID
     title: Optional[str]
     content: str
+    transcript: Optional[str] = None
     mood: Optional[str]
     journal_type: Optional[str]
     created_at: datetime

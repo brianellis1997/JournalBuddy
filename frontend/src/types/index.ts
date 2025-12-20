@@ -13,6 +13,7 @@ export interface JournalEntry {
   id: string;
   title?: string;
   content: string;
+  transcript?: string;
   mood?: 'great' | 'good' | 'okay' | 'bad' | 'terrible';
   journal_type?: JournalType;
   created_at: string;

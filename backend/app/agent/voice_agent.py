@@ -272,14 +272,42 @@ class VoiceAgentTools:
         from app.schemas.entry import EntryCreate
         from app.services.gamification import gamification_service
         from app.services.embedding import embedding_service
+        from app.models.chat import ChatSession, ChatMessage
+        from sqlalchemy import select
 
         valid_moods = ["great", "good", "okay", "bad", "terrible"]
         if mood.lower() not in valid_moods:
             mood = "okay"
 
+        transcript = None
+        logger.info(f"create_journal_entry called. session_id={self.session_id}")
+        if self.session_id:
+            try:
+                result = await self.db.execute(
+                    select(ChatMessage)
+                    .where(ChatMessage.session_id == self.session_id)
+                    .order_by(ChatMessage.created_at)
+                )
+                messages = result.scalars().all()
+                logger.info(f"Found {len(messages)} messages for session {self.session_id}")
+                if messages:
+                    transcript_lines = []
+                    for msg in messages:
+                        speaker = "You" if msg.role == "user" else "JournalBuddy"
+                        transcript_lines.append(f"{speaker}: {msg.content}")
+                    transcript = "\n\n".join(transcript_lines)
+                    logger.info(f"Built transcript with {len(messages)} messages, length={len(transcript)}")
+                else:
+                    logger.warning(f"No messages found for session {self.session_id}")
+            except Exception as e:
+                logger.error(f"Failed to build transcript: {e}", exc_info=True)
+        else:
+            logger.warning("No session_id available, cannot build transcript")
+
         entry_data = EntryCreate(
             title=title,
             content=content,
+            transcript=transcript,
             mood=mood.lower(),
             journal_type=self.journal_type,
         )
