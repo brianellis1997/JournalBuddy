@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from typing import Optional
+from uuid import UUID
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from app.core.security import get_user_from_token
 from app.services.deepgram_service import DeepgramStreamManager
 from app.services.cartesia_service import CartesiaStreamManager
 from app.agent.graph import journal_agent
+from app.crud.chat import chat_crud
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -28,6 +30,25 @@ class VoiceChatSession:
         self._cancelled = False
         self._last_interrupt_time: float = 0
         self._interrupt_cooldown: float = 2.0
+        self.db_session_id: Optional[UUID] = None
+
+    async def create_db_session(self):
+        session = await chat_crud.create_session(
+            self.db,
+            UUID(self.user_id),
+            session_type="voice",
+        )
+        self.db_session_id = session.id
+        logger.info(f"Created voice chat session: {self.db_session_id}")
+
+    async def save_message(self, role: str, content: str):
+        if self.db_session_id and content.strip():
+            await chat_crud.add_message(
+                self.db,
+                self.db_session_id,
+                role,
+                content,
+            )
 
     async def send_message(self, msg_type: str, data: dict = None):
         try:
@@ -56,6 +77,7 @@ class VoiceChatSession:
             return
 
         self.chat_history.append({"role": "user", "content": transcript})
+        await self.save_message("user", transcript)
 
         await self.send_message("user_transcript", {"text": transcript})
         await self.send_message("assistant_thinking")
@@ -99,6 +121,7 @@ class VoiceChatSession:
 
             if not self._cancelled:
                 self.chat_history.append({"role": "assistant", "content": full_response})
+                await self.save_message("assistant", full_response)
                 await self.send_message("assistant_text", {"text": "", "is_final": True})
                 await self.send_message("assistant_done")
 
@@ -134,7 +157,7 @@ class VoiceChatSession:
     async def process_transcripts(self):
         accumulated_transcript = ""
         last_speech_time = asyncio.get_event_loop().time()
-        silence_threshold = 2.5
+        silence_threshold = 1.8
 
         while self.deepgram.is_connected:
             try:
@@ -203,6 +226,7 @@ async def voice_chat(
     session = VoiceChatSession(websocket, str(user.id), db)
 
     try:
+        await session.create_db_session()
         await session.send_message("connected", {"user_id": str(user.id)})
 
         if not await session.start_deepgram():
@@ -212,7 +236,7 @@ async def voice_chat(
 
         await session.send_message("ready")
 
-        greeting = "Hey there! I'm your JournalBuddy. How are you doing today?"
+        greeting = "Hey there! How are you doing today?"
         await session.send_message("assistant_text", {"text": greeting, "is_final": False})
         await session.send_message("assistant_speaking")
 
@@ -224,6 +248,7 @@ async def voice_chat(
                 break
 
         session.chat_history.append({"role": "assistant", "content": greeting})
+        await session.save_message("assistant", greeting)
         await session.send_message("assistant_text", {"text": "", "is_final": True})
         await session.send_message("assistant_done")
 
