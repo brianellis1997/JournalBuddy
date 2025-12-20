@@ -121,6 +121,7 @@ class VoiceChatSession:
                     if chunk and chunk.strip():
                         full_response += chunk
                         has_sent_text = True
+                        logger.info(f"Sending assistant_text chunk: {chunk[:50]}...")
                         await self.send_message("assistant_text", {"text": chunk, "is_final": False})
                         yield chunk
 
@@ -136,11 +137,13 @@ class VoiceChatSession:
                     break
 
             if not self._cancelled:
+                logger.info(f"Response complete. full_response length: {len(full_response)}, has_sent_text: {has_sent_text}")
                 if full_response.strip():
                     self.chat_history.append({"role": "assistant", "content": full_response})
                     await self.save_message("assistant", full_response)
 
                 if has_sent_text:
+                    logger.info("Sending is_final=True")
                     await self.send_message("assistant_text", {"text": "", "is_final": True})
                 await self.send_message("assistant_done")
 
@@ -233,7 +236,70 @@ class VoiceChatSession:
                 logger.error(f"Error processing transcripts: {e}")
                 break
 
+    async def save_session_summary_on_close(self):
+        if not self.db_session_id or len(self.chat_history) < 2:
+            return
+
+        try:
+            from app.models.chat import ChatSession
+
+            conversation_text = "\n".join(
+                f"{msg['role'].upper()}: {msg['content']}"
+                for msg in self.chat_history
+            )
+
+            from langchain_groq import ChatGroq
+            from app.config import settings
+
+            llm = ChatGroq(
+                api_key=settings.groq_api_key,
+                model=settings.groq_model,
+                temperature=0.3,
+                max_tokens=300,
+            )
+
+            prompt = f"""Analyze this voice conversation and provide a brief summary.
+
+Conversation:
+{conversation_text}
+
+Provide your response in this exact format:
+SUMMARY: [1-2 sentence summary of what was discussed]
+TOPICS: [comma-separated key topics, max 5]
+MOOD: [user's overall mood: positive, neutral, or negative]"""
+
+            response = await llm.ainvoke(prompt)
+            content = response.content
+
+            summary = ""
+            topics = ""
+            mood = "neutral"
+
+            for line in content.split("\n"):
+                if line.startswith("SUMMARY:"):
+                    summary = line.replace("SUMMARY:", "").strip()
+                elif line.startswith("TOPICS:"):
+                    topics = line.replace("TOPICS:", "").strip()
+                elif line.startswith("MOOD:"):
+                    mood = line.replace("MOOD:", "").strip().lower()
+
+            session = await self.db.get(ChatSession, self.db_session_id)
+            if session:
+                session.summary = summary or "Voice conversation"
+                session.key_topics = topics
+                session.goal_updates = mood
+                await self.db.commit()
+                logger.info(f"Auto-saved session summary for {self.db_session_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to auto-save session summary: {e}")
+            try:
+                await self.db.rollback()
+            except Exception:
+                pass
+
     async def close(self):
+        await self.save_session_summary_on_close()
         await self.deepgram.close()
 
 

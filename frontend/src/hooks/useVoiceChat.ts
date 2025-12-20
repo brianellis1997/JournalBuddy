@@ -170,10 +170,16 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
         case 'assistant_text':
           const text = message.data?.text as string || '';
           const isTextFinal = message.data?.is_final as boolean || false;
+          console.log('[VoiceChat] assistant_text received:', { text: text.substring(0, 50), isTextFinal });
           if (!isTextFinal && text) {
-            setAssistantText(prev => prev + text);
+            setAssistantText(prev => {
+              const newText = prev + text;
+              console.log('[VoiceChat] assistantText updated:', newText.substring(0, 50));
+              return newText;
+            });
             onAssistantText?.(text, false);
           } else if (isTextFinal) {
+            console.log('[VoiceChat] is_final received, calling onAssistantText');
             onAssistantText?.('', true);
             setAssistantText('');
           }

@@ -2,16 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, BookOpen, Target, MessageCircle, Trophy, LogOut, Mic } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Target, Trophy, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/buddy', label: 'Talk to Buddy', icon: Mic, highlight: true },
   { href: '/journal', label: 'Journal', icon: BookOpen },
   { href: '/goals', label: 'Goals', icon: Target },
-  { href: '/chat', label: 'AI Chat', icon: MessageCircle },
   { href: '/progress', label: 'Progress', icon: Trophy },
 ];
 

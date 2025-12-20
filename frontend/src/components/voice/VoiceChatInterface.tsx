@@ -75,17 +75,24 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
       }
     },
     onAssistantText: (text, isFinal) => {
+      console.log('[Interface] onAssistantText called:', { text: text.substring(0, 30), isFinal, refLength: assistantTextRef.current.length });
       if (!isFinal) {
         assistantTextRef.current += text;
         setCurrentAssistantText(assistantTextRef.current);
+        console.log('[Interface] Updated assistantTextRef:', assistantTextRef.current.substring(0, 50));
       } else {
+        console.log('[Interface] isFinal=true, ref content:', assistantTextRef.current.substring(0, 50));
         if (assistantTextRef.current.trim()) {
+          const content = assistantTextRef.current.trim();
+          console.log('[Interface] Adding message to list:', content.substring(0, 50));
           setMessages(prev => [...prev, {
             id: Date.now().toString(),
             role: 'assistant',
-            content: assistantTextRef.current.trim(),
+            content: content,
             timestamp: new Date(),
           }]);
+        } else {
+          console.log('[Interface] assistantTextRef was empty, not adding message');
         }
         assistantTextRef.current = '';
         setCurrentAssistantText('');

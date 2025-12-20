@@ -155,6 +155,8 @@ class VoiceAgentTools:
 
     async def create_journal_entry(self, title: str, content: str, mood: str) -> str:
         from app.schemas.entry import EntryCreate
+        from app.services.gamification import gamification_service
+        from app.services.embedding import embedding_service
 
         valid_moods = ["great", "good", "okay", "bad", "terrible"]
         if mood.lower() not in valid_moods:
@@ -170,6 +172,25 @@ class VoiceAgentTools:
         try:
             entry = await entry_crud.create(self.db, entry_data, self.user_id)
             logger.info(f"Created journal entry: {entry.id} with title '{title}'")
+
+            if self.journal_type == "morning":
+                await gamification_service.award_xp(self.db, self.user_id, "morning_journal", entry.id)
+            elif self.journal_type == "evening":
+                await gamification_service.award_xp(self.db, self.user_id, "evening_journal", entry.id)
+            else:
+                await gamification_service.award_xp(self.db, self.user_id, "entry_created", entry.id)
+
+            await gamification_service.check_achievements(self.db, self.user_id)
+            logger.info(f"Awarded XP for voice journal entry: {entry.id}")
+
+            try:
+                embedding = await embedding_service.generate_embedding(content)
+                entry.embedding = embedding
+                await self.db.commit()
+                logger.info(f"Generated embedding for voice journal entry: {entry.id}")
+            except Exception as embed_err:
+                logger.error(f"Failed to generate embedding: {embed_err}")
+
             return f"Journal entry created: '{title}'"
         except Exception as e:
             logger.error(f"Failed to create journal entry: {e}")
@@ -287,8 +308,8 @@ class VoiceAgent:
 
         messages.append(HumanMessage(content=user_message))
 
-        max_iterations = 3
-        for _ in range(max_iterations):
+        max_iterations = 5
+        for iteration in range(max_iterations):
             try:
                 response = await llm_with_tools.ainvoke(messages)
             except Exception as e:
@@ -299,6 +320,10 @@ class VoiceAgent:
             if not response.tool_calls:
                 if response.content:
                     yield response.content
+                else:
+                    logger.warning(f"LLM returned empty response on iteration {iteration}")
+                    if iteration == 0:
+                        yield "Hmm, let me think about that. What were you saying?"
                 return
 
             end_conversation_called = False
@@ -325,7 +350,7 @@ class VoiceAgent:
                 else:
                     result = "Unknown tool"
 
-                messages.append(AIMessage(content="", tool_calls=[tool_call]))
+                messages.append(AIMessage(content=response.content or "", tool_calls=[tool_call]))
                 messages.append(ToolMessage(content=result, tool_call_id=tool_call["id"]))
 
             if end_conversation_called:
@@ -333,8 +358,8 @@ class VoiceAgent:
                 yield "\n__END_CONVERSATION__"
                 return
 
-        if response.content:
-            yield response.content
+        logger.warning("Max iterations reached without response")
+        yield "I'm having a bit of trouble. Could you repeat that?"
 
 
 voice_agent = VoiceAgent()

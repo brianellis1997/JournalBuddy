@@ -70,11 +70,11 @@ export function JournalPrompt({ scheduleStatus, className }: JournalPromptProps)
               </Button>
               <Button
                 variant="outline"
-                onClick={() => router.push('/buddy?type=morning')}
+                onClick={() => router.push('/journal/new?type=morning&mode=voice')}
                 className="flex items-center gap-2"
               >
                 <Mic size={18} />
-                Talk to Buddy
+                Voice
               </Button>
             </>
           )}
@@ -89,11 +89,11 @@ export function JournalPrompt({ scheduleStatus, className }: JournalPromptProps)
               </Button>
               <Button
                 variant="outline"
-                onClick={() => router.push('/buddy?type=evening')}
+                onClick={() => router.push('/journal/new?type=evening&mode=voice')}
                 className="flex items-center gap-2"
               >
                 <Mic size={18} />
-                Talk to Buddy
+                Voice
               </Button>
             </>
           )}
