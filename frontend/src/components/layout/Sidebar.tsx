@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, BookOpen, Target, MessageCircle, Trophy, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Target, MessageCircle, Trophy, LogOut, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/buddy', label: 'Talk to Buddy', icon: Mic, highlight: true },
   { href: '/journal', label: 'Journal', icon: BookOpen },
   { href: '/goals', label: 'Goals', icon: Target },
   { href: '/chat', label: 'AI Chat', icon: MessageCircle },
@@ -28,6 +29,7 @@ export function Sidebar() {
         <ul className="space-y-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const isHighlight = 'highlight' in item && item.highlight;
             return (
               <li key={item.href}>
                 <Link
@@ -36,6 +38,8 @@ export function Sidebar() {
                     'flex items-center gap-3 px-4 py-2 rounded-lg transition-colors',
                     isActive
                       ? 'bg-primary-50 text-primary-600'
+                      : isHighlight
+                      ? 'bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600 hover:from-purple-100 hover:to-pink-100 border border-purple-200'
                       : 'text-gray-600 hover:bg-gray-100'
                   )}
                 >

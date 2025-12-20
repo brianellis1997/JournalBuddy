@@ -50,3 +50,24 @@ def decode_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
+
+
+async def get_user_from_token(token: str, db) -> Optional["User"]:
+    from app.crud.user import user_crud
+    from app.models.user import User
+
+    payload = decode_token(token)
+    if payload is None:
+        return None
+
+    user_id = payload.get("sub")
+    token_type = payload.get("type")
+
+    if user_id is None or token_type != "access":
+        return None
+
+    try:
+        user = await user_crud.get_by_id(db, uuid.UUID(user_id))
+        return user
+    except (ValueError, Exception):
+        return None
