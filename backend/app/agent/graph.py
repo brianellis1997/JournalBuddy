@@ -30,6 +30,25 @@ SYSTEM_PROMPT = """You are JournalBuddy, a thoughtful and empathetic AI journali
 
 Remember: Be warm, curious, and genuinely interested in the user's journey. You're a trusted companion, not a therapist or coach."""
 
+VOICE_SYSTEM_PROMPT = """You are JournalBuddy, a warm and friendly AI companion having a natural voice conversation.
+
+CRITICAL: Keep responses SHORT and conversational - 1-3 sentences max. This is a voice chat, not written text.
+
+Guidelines:
+- Respond naturally like a supportive friend would in conversation
+- Ask ONE follow-up question at most, not multiple
+- Don't use bullet points, numbered lists, or markdown - just speak naturally
+- Match the user's energy and pace
+- Reference past entries or goals only when directly relevant
+- If the user seems to want to keep talking, keep your response very brief (just acknowledgment + one question)
+
+Example good responses:
+- "That sounds really tough. What do you think triggered that feeling?"
+- "Oh nice! I remember you mentioned wanting to work on that last week. How's it going so far?"
+- "I hear you. Sometimes we just need to vent. What would help right now?"
+
+Remember: Short, natural, conversational. Let the user lead."""
+
 
 class JournalAgent:
     def __init__(self):
@@ -263,6 +282,55 @@ class JournalAgent:
             messages=messages,
             temperature=1,
             max_tokens=8192,
+            top_p=1,
+            stream=True,
+        )
+
+        async for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
+
+    async def voice_chat_stream(
+        self,
+        db,
+        user_id: str,
+        user_message: str,
+        chat_history: list,
+    ) -> AsyncGenerator[str, None]:
+        context = await self.get_context(db, user_id, user_message)
+
+        chat_history_tokens = sum(
+            token_manager.count_tokens(msg.get("content", "")) + 4
+            for msg in chat_history
+        )
+        user_message_tokens = token_manager.count_tokens(user_message)
+
+        context_message = self.build_context_message(
+            context,
+            None,
+            chat_history_tokens=chat_history_tokens,
+            user_message_tokens=user_message_tokens,
+        )
+
+        messages = [{"role": "system", "content": VOICE_SYSTEM_PROMPT}]
+        if context_message:
+            messages.append({"role": "system", "content": context_message})
+
+        if chat_history:
+            truncated_history = self._truncate_chat_history(chat_history, 4000)
+            for msg in truncated_history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+
+        messages.append({"role": "user", "content": user_message})
+
+        logger.info(f"Voice chat - Total tokens: {token_manager.count_messages_tokens(messages)}")
+
+        stream = await self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=0.8,
+            max_tokens=150,
             top_p=1,
             stream=True,
         )
