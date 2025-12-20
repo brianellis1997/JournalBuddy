@@ -1,20 +1,27 @@
 'use client';
 
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { VoiceChatState } from '@/hooks/useVoiceChat';
+import type { VoiceChatState, AvatarEmotion } from '@/hooks/useVoiceChat';
+import { AvatarSVG } from './AvatarSVG';
 
 interface JournalBuddyAvatarProps {
   state: VoiceChatState;
+  emotion?: AvatarEmotion;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function JournalBuddyAvatar({ state, className, size = 'lg' }: JournalBuddyAvatarProps) {
+export function JournalBuddyAvatar({ state, emotion = 'neutral', className, size = 'lg' }: JournalBuddyAvatarProps) {
   const sizeClasses = {
     sm: 'w-24 h-24',
     md: 'w-40 h-40',
     lg: 'w-64 h-64',
+  };
+
+  const avatarSizes = {
+    sm: 80,
+    md: 120,
+    lg: 200,
   };
 
   const stateColors = {
@@ -65,13 +72,12 @@ export function JournalBuddyAvatar({ state, className, size = 'lg' }: JournalBud
         )}
 
         <div className={cn('relative z-10 transition-transform duration-300', stateAnimations[state])}>
-          <Image
-            src="/journal-buddy-avatar.png"
-            alt="JournalBuddy"
-            width={size === 'lg' ? 200 : size === 'md' ? 120 : 80}
-            height={size === 'lg' ? 200 : size === 'md' ? 120 : 80}
+          <AvatarSVG
+            emotion={emotion}
+            isListening={state === 'listening'}
+            isSpeaking={state === 'speaking'}
+            size={avatarSizes[size]}
             className="drop-shadow-lg"
-            priority
           />
         </div>
       </div>

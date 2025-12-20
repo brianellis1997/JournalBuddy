@@ -125,3 +125,27 @@ export interface EntryListResponse {
   page: number;
   limit: number;
 }
+
+export interface AutoSummary {
+  id: string;
+  period_type: 'weekly' | 'monthly';
+  period_start: string;
+  period_end: string;
+  title: string;
+  content: string;
+  mood_trend?: 'improving' | 'stable' | 'declining' | 'mixed';
+  key_themes?: string;
+  goal_progress?: string;
+  entry_count: number;
+  created_at: string;
+}
+
+export interface AutoSummaryListResponse {
+  summaries: AutoSummary[];
+  total: number;
+}
+
+export interface GenerateSummaryResponse {
+  summary: AutoSummary;
+  is_new: boolean;
+}

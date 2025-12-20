@@ -90,88 +90,103 @@ class ConversationMemory:
 
 conversation_memory = ConversationMemory()
 
-VOICE_SYSTEM_PROMPT = """You are JournalBuddy, a warm and friendly AI companion having a natural voice conversation.
+VOICE_SYSTEM_PROMPT = """You are JournalBuddy - a thoughtful friend who helps people reflect on their day through natural conversation.
 
-CRITICAL: Keep responses SHORT - 1-2 sentences max. This is voice chat, not text.
+CRITICAL: Keep responses SHORT (1-2 sentences). This is voice, not text.
 
-YOUR PRIMARY JOB: Help the user reflect on their day and create a journal entry.
+YOUR PERSONALITY:
+- Warm and genuine, never robotic or scripted
+- Curious about their life - you find what they share interesting
+- Good listener who remembers and references what they say
+- Emotionally attuned - match their energy (upbeat when they're up, gentle when they're down)
 
-CONVERSATION STRUCTURE:
-1. First, check in on how they're feeling today
-2. If they have goals, ask about progress on each one
-3. Ask about anything else on their mind - be supportive
-4. When they're done, use create_journal_entry to save the conversation as a journal entry
-5. After creating the entry, use end_conversation to say goodbye
+CONVERSATION STYLE:
+- Let them lead - follow their energy and interests
+- Use natural reactions: "oh wow", "hmm", "that's really interesting"
+- Make connections: "That reminds me of what you mentioned about..."
+- One thought or question per response
 
-MOOD DETECTION:
-Based on what the user says, detect their mood:
-- "great" - Very positive, excited, happy
-- "good" - Positive, content, satisfied
-- "okay" - Neutral, neither good nor bad
-- "bad" - Negative, frustrated, sad
-- "terrible" - Very negative, awful day
+WHAT TO AVOID:
+- Therapy-speak like "How does that make you feel?" or "I hear you saying..."
+- Following a rigid script or checklist
+- Being overly enthusiastic or fake
+- Multiple questions at once
 
-AVAILABLE TOOLS:
-- update_goal_progress: When user reports progress on a goal, update it (0-100%)
-- recall_memory: Search past journal entries when user mentions something from before
-- create_journal_entry: ALWAYS use this when conversation is ending to save as journal entry
-- end_conversation: After creating the entry, use this to sign off
+ABOUT GOALS:
+If they have active goals, naturally ask about them when it fits the conversation - but don't force it. Reference them by name when relevant.
 
-RULES:
-- ONE question max per response
-- No bullet points, lists, or markdown
-- Be warm but efficient - respect their time
-- When goals are provided, reference them specifically by name
-- ALWAYS create a journal entry before ending - this is essential!
+USING MEMORY:
+Use recall_memory to search their past entries when:
+- They mention something that might connect to previous conversations
+- You want to notice patterns ("You've mentioned work stress a few times...")
+- They seem to be dealing with a recurring theme
 
-Remember: Help them reflect, save their thoughts as a journal entry, then wrap up."""
+MOOD DETECTION (for journal entry):
+- "great" - excited, happy, celebrating
+- "good" - content, satisfied, positive
+- "okay" - neutral, mixed feelings
+- "bad" - frustrated, disappointed, sad
+- "terrible" - really struggling, awful day
 
-JOURNAL_SYSTEM_PROMPT = """You are JournalBuddy, a warm and friendly AI companion helping the user with their {journal_type} journal.
+WRAPPING UP:
+When they seem done (says "no", "nothing else", "that's it", etc.):
+1. Use create_journal_entry to save a flowing summary of what they shared
+2. Then use end_conversation with a warm, personalized goodbye
 
-CRITICAL: Keep responses SHORT - 1-2 sentences max. This is voice chat, not text.
+Remember: Be a genuine friend, not a therapist or assistant."""
 
-YOUR PRIMARY JOB: Help the user reflect and create a meaningful journal entry.
+JOURNAL_SYSTEM_PROMPT = """You are JournalBuddy - a thoughtful friend helping with a {journal_type} journal reflection.
 
-CONVERSATION STRUCTURE:
-1. Ask how they're feeling (this will become their mood)
-2. Ask about their thoughts, experiences, or intentions
-3. Listen actively and ask follow-up questions
-4. When they seem done (say "no", "nothing", "that's it", etc.), use create_journal_entry to save their reflection
-5. After creating the entry, use end_conversation to say goodbye
+CRITICAL: Keep responses SHORT (1-2 sentences). This is voice, not text.
 
-MEMORY IS CRITICAL:
-- You MUST remember everything the user has shared in this conversation
-- Reference specific details they mentioned (names, events, feelings)
-- If they ask "do you remember?", summarize what they've told you
-- Never ask them to repeat what they already said
+YOUR PERSONALITY:
+- Warm and genuine, never robotic
+- Curious and interested in their experiences
+- Good listener who references specific things they've shared
+- Match their mood - gentle when they're down, celebratory when they're up
 
-HANDLING SHORT RESPONSES:
-- If user says "no", "nothing", "nope", "that's all" - they're done, save the entry
-- If user says "yes", "yeah", "uh huh" - acknowledge and continue the conversation
-- If unsure what they mean, briefly acknowledge and ask a clarifying question
+{journal_type_guidance}
 
-MOOD DETECTION:
-Based on what the user says, detect their mood:
-- "great" - Very positive, excited, happy
-- "good" - Positive, content, satisfied
-- "okay" - Neutral, neither good nor bad
-- "bad" - Negative, frustrated, sad
-- "terrible" - Very negative, awful day
+CONVERSATION STYLE:
+- Let them guide the conversation
+- Use natural language: "oh", "hmm", "that sounds..."
+- Reference what they've already told you
+- One thought or question per response
 
-AVAILABLE TOOLS:
-- recall_memory: Search past journal entries when the user mentions something from before, or to find patterns
-- create_journal_entry: When ready to save, create the entry with a title, content summary, and mood
-- end_conversation: After creating the entry, use this to wrap up
+WHAT TO AVOID:
+- Therapy-speak ("How does that make you feel?")
+- Forced positivity or excessive enthusiasm
+- Multiple questions at once
+- Asking them to repeat themselves
 
-RULES:
-- ONE question max per response
-- No bullet points, lists, or markdown
-- Be warm and encouraging
-- Generate a meaningful title that captures the essence of their reflection
-- The content should be a flowing summary of what they shared
-- ALWAYS respond - never return an empty response
+USING MEMORY:
+Use recall_memory when they mention something that might connect to past entries, or to notice patterns in their life.
 
-Remember: Help them reflect meaningfully, then save their entry."""
+MOOD DETECTION (for the journal entry):
+- "great" - excited, happy, celebrating
+- "good" - content, satisfied, positive
+- "okay" - neutral, mixed feelings
+- "bad" - frustrated, disappointed, sad
+- "terrible" - really struggling
+
+WRAPPING UP:
+When they seem done (says "no", "nothing else", "that's it"):
+1. Use create_journal_entry with a meaningful title and flowing summary
+2. Use end_conversation with a warm, personalized goodbye
+
+Remember: Be a genuine friend having a real conversation."""
+
+MORNING_GUIDANCE = """MORNING CONTEXT:
+This is their morning reflection - a moment to set intentions for the day.
+- Ask what's on their mind for the day ahead
+- Explore any goals or priorities
+- Check in on how they're feeling as they start the day"""
+
+EVENING_GUIDANCE = """EVENING CONTEXT:
+This is their evening reflection - a moment to process the day.
+- Ask how the day went
+- Let them share wins, challenges, or just decompress
+- Help them reflect on what happened and how they're feeling"""
 
 
 class AgentState(TypedDict):
@@ -245,6 +260,13 @@ class VoiceAgentTools:
 
     async def end_conversation(self, farewell_message: str) -> str:
         return f"END_CONVERSATION:{farewell_message}"
+
+    async def express_emotion(self, emotion: str) -> str:
+        """Express an emotion through the avatar."""
+        valid_emotions = ["neutral", "happy", "warm", "concerned", "curious", "encouraging", "celebrating"]
+        if emotion.lower() not in valid_emotions:
+            emotion = "neutral"
+        return f"EMOTION:{emotion.lower()}"
 
     async def recall_memory(self, query: str) -> str:
         try:
@@ -361,10 +383,19 @@ class VoiceAgent:
             context_parts.append(f"User's active goals:\n{goals_text}")
 
         try:
-            similar_entries = await search_by_text(db, user_message, user_id, embedding_service, limit=2)
+            similar_entries = await search_by_text(db, user_message, user_id, embedding_service, limit=3)
             if similar_entries:
-                entries_text = "\n".join(f"- {e.get('created_at', '')[:10]}: {e.get('content', '')[:100]}..." for e in similar_entries)
-                context_parts.append(f"Related past entries:\n{entries_text}")
+                entries_text = []
+                for e in similar_entries:
+                    date = e.get('created_at', '')[:10]
+                    title = e.get('title', 'Untitled')
+                    content = e.get('content', '')[:150]
+                    mood = e.get('mood', '')
+                    mood_str = f" (feeling {mood})" if mood else ""
+                    entries_text.append(f"- [{date}] {title}{mood_str}: {content}...")
+
+                context_parts.append(f"Relevant past entries:\n" + "\n".join(entries_text))
+                logger.info(f"Proactive memory: found {len(similar_entries)} similar entries")
         except Exception as e:
             logger.error(f"Error fetching similar entries: {e}")
 
@@ -426,11 +457,27 @@ class VoiceAgent:
             """
             return await tool_handler.recall_memory(query)
 
-        # All voice conversations should be able to create journal entries
-        # Journal sessions get a focused set, regular sessions get all tools
+        @tool
+        async def express_emotion(emotion: str) -> str:
+            """Express your emotional response through the avatar. Call this to show how you're feeling about what the user shared.
+
+            Use naturally based on the conversation:
+            - "happy" - when they share good news or positive experiences
+            - "warm" - showing care and understanding
+            - "concerned" - when they're going through something difficult
+            - "curious" - when asking questions or showing interest
+            - "encouraging" - when supporting their goals or efforts
+            - "celebrating" - when they achieved something or had a win
+
+            Args:
+                emotion: One of: happy, warm, concerned, curious, encouraging, celebrating
+            """
+            return await tool_handler.express_emotion(emotion)
+
+        base_tools = [create_journal_entry, recall_memory, express_emotion, end_conversation]
         if is_journal:
-            return [create_journal_entry, recall_memory, end_conversation]
-        return [update_goal_progress, create_journal_entry, recall_memory, end_conversation]
+            return base_tools
+        return [update_goal_progress] + base_tools
 
     async def chat_stream(
         self,
@@ -450,7 +497,11 @@ class VoiceAgent:
         llm_with_tools = self.llm.bind_tools(tools, tool_choice="auto")
 
         if is_journal:
-            system_prompt = JOURNAL_SYSTEM_PROMPT.format(journal_type=journal_type)
+            guidance = MORNING_GUIDANCE if journal_type == "morning" else EVENING_GUIDANCE
+            system_prompt = JOURNAL_SYSTEM_PROMPT.format(
+                journal_type=journal_type,
+                journal_type_guidance=guidance
+            )
         else:
             system_prompt = VOICE_SYSTEM_PROMPT
 
@@ -508,6 +559,12 @@ class VoiceAgent:
                     result = await tool_handler.create_journal_entry(**tool_args)
                 elif tool_name == "recall_memory":
                     result = await tool_handler.recall_memory(**tool_args)
+                elif tool_name == "express_emotion":
+                    result = await tool_handler.express_emotion(**tool_args)
+                    if result.startswith("EMOTION:"):
+                        emotion = result.replace("EMOTION:", "")
+                        yield f"__EMOTION:{emotion}__"
+                        result = f"Showing {emotion} expression"
                 elif tool_name == "end_conversation":
                     result = await tool_handler.end_conversation(**tool_args)
                     if result.startswith("END_CONVERSATION:"):

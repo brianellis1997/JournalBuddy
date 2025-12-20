@@ -24,3 +24,4 @@ class User(Base):
     chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
     achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
     xp_events = relationship("XPEvent", back_populates="user", cascade="all, delete-orphan")
+    auto_summaries = relationship("AutoSummary", back_populates="user", cascade="all, delete-orphan")

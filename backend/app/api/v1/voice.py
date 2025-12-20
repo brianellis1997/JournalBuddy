@@ -126,6 +126,10 @@ class VoiceChatSession:
                         tool_name = chunk.replace("__TOOL_DONE:", "").replace("__", "")
                         await self.send_message("tool_call", {"tool": tool_name, "status": "done"})
                         continue
+                    if chunk.startswith("__EMOTION:") and chunk.endswith("__"):
+                        emotion = chunk.replace("__EMOTION:", "").replace("__", "")
+                        await self.send_message("emotion", {"emotion": emotion})
+                        continue
                     if chunk and chunk.strip():
                         full_response += chunk
                         has_sent_text = True

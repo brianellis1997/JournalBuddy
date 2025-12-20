@@ -27,6 +27,10 @@ module.exports = {
         'think': 'think 2s ease-in-out infinite',
         'speak': 'speak 0.5s ease-in-out infinite',
         'sound-wave': 'soundWave 0.6s ease-in-out infinite alternate',
+        'breathe': 'breathe 4s ease-in-out infinite',
+        'blink': 'blink 4s ease-in-out infinite',
+        'nod': 'nod 0.5s ease-in-out',
+        'mouth-speak': 'mouthSpeak 0.3s ease-in-out infinite alternate',
       },
       keyframes: {
         float: {
@@ -48,6 +52,22 @@ module.exports = {
         soundWave: {
           '0%': { height: '20%' },
           '100%': { height: '100%' },
+        },
+        breathe: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.02)' },
+        },
+        blink: {
+          '0%, 45%, 55%, 100%': { transform: 'scaleY(1)' },
+          '50%': { transform: 'scaleY(0.1)' },
+        },
+        nod: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(3px)' },
+        },
+        mouthSpeak: {
+          '0%': { transform: 'scaleY(1)' },
+          '100%': { transform: 'scaleY(1.3)' },
         },
       },
     },

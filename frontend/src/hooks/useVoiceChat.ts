@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 
 export type VoiceChatState = 'disconnected' | 'connecting' | 'idle' | 'listening' | 'thinking' | 'speaking';
+export type AvatarEmotion = 'neutral' | 'happy' | 'warm' | 'concerned' | 'curious' | 'encouraging' | 'celebrating';
 
 interface VoiceChatMessage {
   type: string;
@@ -24,10 +25,11 @@ interface UseVoiceChatOptions {
   onError?: (error: string) => void;
   onConversationEnd?: () => void;
   onToolCall?: (toolCall: ToolCall) => void;
+  onEmotionChange?: (emotion: AvatarEmotion) => void;
 }
 
 export function useVoiceChat(options: UseVoiceChatOptions = {}) {
-  const { journalType, onTranscript, onAssistantText, onStateChange, onError, onConversationEnd, onToolCall } = options;
+  const { journalType, onTranscript, onAssistantText, onStateChange, onError, onConversationEnd, onToolCall, onEmotionChange } = options;
   const { token } = useAuthStore();
 
   const [state, setState] = useState<VoiceChatState>('disconnected');
@@ -36,6 +38,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
   const [assistantText, setAssistantText] = useState('');
   const [conversationEnded, setConversationEnded] = useState(false);
   const [activeTools, setActiveTools] = useState<ToolCall[]>([]);
+  const [emotion, setEmotion] = useState<AvatarEmotion>('neutral');
 
   const [amplitude, setAmplitude] = useState(0);
 
@@ -228,13 +231,21 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
           onToolCall?.(toolCall);
           break;
 
+        case 'emotion':
+          const newEmotion = message.data?.emotion as AvatarEmotion;
+          if (newEmotion) {
+            setEmotion(newEmotion);
+            onEmotionChange?.(newEmotion);
+          }
+          break;
+
         case 'pong':
           break;
       }
     } catch (e) {
       console.error('Failed to parse WebSocket message:', e);
     }
-  }, [onTranscript, onAssistantText, onError, onConversationEnd, onToolCall, updateState, processAudioQueue, stopAudioPlayback]);
+  }, [onTranscript, onAssistantText, onError, onConversationEnd, onToolCall, onEmotionChange, updateState, processAudioQueue, stopAudioPlayback]);
 
   const connect = useCallback(async () => {
     if (!token) {
@@ -382,6 +393,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
     amplitude,
     conversationEnded,
     activeTools,
+    emotion,
     start,
     disconnect,
     interrupt,
