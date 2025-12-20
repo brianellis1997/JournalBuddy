@@ -60,6 +60,7 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
     conversationEnded,
     activeTools,
     emotion,
+    isAudioPlaying,
     start,
     disconnect,
     interrupt,
@@ -138,7 +139,7 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
     <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
       {state === 'disconnected' ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <JournalBuddyAvatar state={state} emotion={emotion} size="lg" />
+          <JournalBuddyAvatar state={state} emotion={emotion} isAudioPlaying={isAudioPlaying} size="lg" />
           <div className="mt-12 text-center max-w-md">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Talk with JournalBuddy
@@ -162,7 +163,7 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
         <>
           <div className="flex items-center justify-between p-4 border-b bg-white">
             <div className="flex items-center gap-3">
-              <JournalBuddyAvatar state={state} emotion={emotion} size="sm" />
+              <JournalBuddyAvatar state={state} emotion={emotion} isAudioPlaying={isAudioPlaying} size="sm" />
               <div>
                 <p className="font-medium text-gray-900">JournalBuddy</p>
                 <p className="text-sm text-gray-500">

@@ -7,11 +7,12 @@ import { AvatarSVG } from './AvatarSVG';
 interface JournalBuddyAvatarProps {
   state: VoiceChatState;
   emotion?: AvatarEmotion;
+  isAudioPlaying?: boolean;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function JournalBuddyAvatar({ state, emotion = 'neutral', className, size = 'lg' }: JournalBuddyAvatarProps) {
+export function JournalBuddyAvatar({ state, emotion = 'neutral', isAudioPlaying = false, className, size = 'lg' }: JournalBuddyAvatarProps) {
   const sizeClasses = {
     sm: 'w-24 h-24',
     md: 'w-40 h-40',
@@ -75,7 +76,7 @@ export function JournalBuddyAvatar({ state, emotion = 'neutral', className, size
           <AvatarSVG
             emotion={emotion}
             isListening={state === 'listening'}
-            isSpeaking={state === 'speaking'}
+            isSpeaking={isAudioPlaying}
             size={avatarSizes[size]}
             className="drop-shadow-lg"
           />

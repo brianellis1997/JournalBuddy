@@ -41,6 +41,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
   const [emotion, setEmotion] = useState<AvatarEmotion>('neutral');
 
   const [amplitude, setAmplitude] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -52,11 +53,27 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const audioPlaybackCheckRef = useRef<number | null>(null);
 
   const updateState = useCallback((newState: VoiceChatState) => {
     setState(newState);
     onStateChange?.(newState);
   }, [onStateChange]);
+
+  const checkAudioPlayback = useCallback(() => {
+    if (audioContextRef.current && nextPlayTimeRef.current > 0) {
+      const isPlaying = audioContextRef.current.currentTime < nextPlayTimeRef.current;
+      setIsAudioPlaying(isPlaying);
+
+      if (isPlaying) {
+        audioPlaybackCheckRef.current = requestAnimationFrame(checkAudioPlayback);
+      } else {
+        audioPlaybackCheckRef.current = null;
+      }
+    } else {
+      setIsAudioPlaying(false);
+    }
+  }, []);
 
   const playAudioChunk = useCallback(async (audioData: ArrayBuffer) => {
     if (!audioContextRef.current) {
@@ -82,7 +99,12 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
     const startTime = Math.max(currentTime, nextPlayTimeRef.current);
     source.start(startTime);
     nextPlayTimeRef.current = startTime + audioBuffer.duration;
-  }, []);
+
+    if (!audioPlaybackCheckRef.current) {
+      setIsAudioPlaying(true);
+      audioPlaybackCheckRef.current = requestAnimationFrame(checkAudioPlayback);
+    }
+  }, [checkAudioPlayback]);
 
   const processAudioQueue = useCallback(async () => {
     if (isPlayingRef.current) return;
@@ -107,6 +129,12 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
     audioQueueRef.current = [];
     isPlayingRef.current = false;
     nextPlayTimeRef.current = 0;
+    setIsAudioPlaying(false);
+
+    if (audioPlaybackCheckRef.current) {
+      cancelAnimationFrame(audioPlaybackCheckRef.current);
+      audioPlaybackCheckRef.current = null;
+    }
 
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close();
@@ -394,6 +422,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
     conversationEnded,
     activeTools,
     emotion,
+    isAudioPlaying,
     start,
     disconnect,
     interrupt,
