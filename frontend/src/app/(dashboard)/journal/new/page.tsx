@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -10,7 +10,9 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Card, CardContent } from '@/components/ui/Card';
 import { VoiceRecorder } from '@/components/ui/VoiceRecorder';
+import { JournalTypeSelector } from '@/components/schedule/JournalTypeSelector';
 import { cn } from '@/lib/utils';
+import type { JournalType } from '@/types';
 
 const moods = [
   { value: 'great', emoji: '😊', label: 'Great' },
@@ -22,11 +24,20 @@ const moods = [
 
 export default function NewEntryPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<string | undefined>();
+  const [journalType, setJournalType] = useState<JournalType | undefined>();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const typeParam = searchParams.get('type') as JournalType | null;
+    if (typeParam && ['morning', 'evening', 'freeform'].includes(typeParam)) {
+      setJournalType(typeParam);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +54,7 @@ export default function NewEntryPage() {
         title: title.trim() || undefined,
         content: content.trim(),
         mood,
+        journal_type: journalType,
       });
       router.push(`/journal/${entry.id}`);
     } catch (err) {
@@ -61,7 +73,11 @@ export default function NewEntryPage() {
             Back
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">New Journal Entry</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {journalType === 'morning' ? 'Morning Journal' :
+           journalType === 'evening' ? 'Evening Journal' :
+           'New Journal Entry'}
+        </h1>
       </div>
 
       <Card>
@@ -72,6 +88,16 @@ export default function NewEntryPage() {
                 {error}
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Journal Type
+              </label>
+              <JournalTypeSelector
+                value={journalType}
+                onChange={setJournalType}
+              />
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

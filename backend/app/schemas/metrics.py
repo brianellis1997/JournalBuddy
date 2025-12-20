@@ -10,3 +10,7 @@ class MetricsResponse(BaseModel):
     total_goals: int
     active_goals: int
     completed_goals: int
+    total_xp: int
+    level: int
+    morning_completed_today: bool
+    evening_completed_today: bool

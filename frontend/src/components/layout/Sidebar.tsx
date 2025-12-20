@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, BookOpen, Target, MessageCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Target, MessageCircle, Trophy, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/journal', label: 'Journal', icon: BookOpen },
   { href: '/goals', label: 'Goals', icon: Target },
   { href: '/chat', label: 'AI Chat', icon: MessageCircle },
+  { href: '/progress', label: 'Progress', icon: Trophy },
 ];
 
 export function Sidebar() {

@@ -9,6 +9,7 @@ from app.crud.entry import entry_crud
 from app.schemas.entry import EntryCreate, EntryUpdate, EntryResponse, EntryListResponse, SimilarEntryResponse
 from app.services.embedding import embedding_service
 from app.services.vector_search import search_similar_entries
+from app.services.gamification import gamification_service
 from app.core.database import async_session_maker
 from app.models.entry import Entry
 
@@ -45,7 +46,25 @@ async def create_entry(
 ):
     entry = await entry_crud.create(db, entry_in, current_user.id)
     background_tasks.add_task(generate_entry_embedding, entry.id, entry.content)
+    background_tasks.add_task(award_entry_xp, current_user.id, entry.id, entry_in.journal_type)
     return entry
+
+
+async def award_entry_xp(user_id: UUID, entry_id: UUID, journal_type: Optional[str]):
+    logger.info(f"Awarding XP for entry {entry_id}, type: {journal_type}")
+    try:
+        async with async_session_maker() as db:
+            if journal_type == "morning":
+                await gamification_service.award_xp(db, user_id, "morning_journal", entry_id)
+            elif journal_type == "evening":
+                await gamification_service.award_xp(db, user_id, "evening_journal", entry_id)
+            else:
+                await gamification_service.award_xp(db, user_id, "entry_created", entry_id)
+
+            await gamification_service.check_achievements(db, user_id)
+            logger.info(f"XP awarded for entry {entry_id}")
+    except Exception as e:
+        logger.error(f"Error awarding XP for entry {entry_id}: {e}")
 
 
 async def generate_entry_embedding(entry_id: UUID, content: str):

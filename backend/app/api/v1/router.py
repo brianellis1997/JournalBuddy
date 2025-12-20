@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, users, entries, goals, chat, metrics, transcribe
+from app.api.v1 import auth, users, entries, goals, chat, metrics, transcribe, gamification
 
 api_router = APIRouter()
 
@@ -11,3 +11,4 @@ api_router.include_router(goals.router, prefix="/goals", tags=["goals"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(metrics.router, prefix="/metrics", tags=["metrics"])
 api_router.include_router(transcribe.router, prefix="/transcribe", tags=["transcribe"])
+api_router.include_router(gamification.router, prefix="/gamification", tags=["gamification"])

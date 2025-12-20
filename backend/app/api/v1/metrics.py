@@ -1,10 +1,13 @@
 from fastapi import APIRouter
+from sqlalchemy import select
 
 from app.api.deps import Database, CurrentUser
 from app.crud.entry import entry_crud
 from app.crud.goal import goal_crud
 from app.schemas.metrics import MetricsResponse
 from app.services.metrics import calculate_streak
+from app.services.schedule import schedule_service
+from app.models.user import User
 
 router = APIRouter()
 
@@ -22,6 +25,15 @@ async def get_metrics(current_user: CurrentUser, db: Database):
     active_goals = await goal_crud.count_by_status(db, current_user.id, "active")
     completed_goals = await goal_crud.count_by_status(db, current_user.id, "completed")
 
+    result = await db.execute(select(User).where(User.id == current_user.id))
+    user = result.scalar_one_or_none()
+    total_xp = user.total_xp if user else 0
+    level = user.level if user else 1
+
+    morning_completed, evening_completed = await schedule_service.check_today_completion(
+        db, current_user.id
+    )
+
     return MetricsResponse(
         total_entries=total_entries,
         current_streak=current_streak,
@@ -31,4 +43,8 @@ async def get_metrics(current_user: CurrentUser, db: Database):
         total_goals=total_goals,
         active_goals=active_goals,
         completed_goals=completed_goals,
+        total_xp=total_xp,
+        level=level,
+        morning_completed_today=morning_completed,
+        evening_completed_today=evening_completed,
     )

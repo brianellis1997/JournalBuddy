@@ -2,30 +2,40 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, TrendingUp, BookOpen, Target, Flame } from 'lucide-react';
+import { Plus, TrendingUp, BookOpen, Target, Flame, Star } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import type { Metrics, JournalEntry, Goal } from '@/types';
+import { JournalPrompt } from '@/components/schedule/JournalPrompt';
+import { XPProgressBar } from '@/components/gamification/XPProgressBar';
+import { LevelBadge } from '@/components/gamification/LevelBadge';
+import { StreakDisplay } from '@/components/gamification/StreakDisplay';
+import type { Metrics, JournalEntry, Goal, ScheduleStatus, GamificationStats } from '@/types';
 import { formatRelativeDate, getMoodEmoji, truncate } from '@/lib/utils';
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [recentEntries, setRecentEntries] = useState<JournalEntry[]>([]);
   const [activeGoals, setActiveGoals] = useState<Goal[]>([]);
+  const [scheduleStatus, setScheduleStatus] = useState<ScheduleStatus | null>(null);
+  const [gamificationStats, setGamificationStats] = useState<GamificationStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [metricsData, entriesData, goalsData] = await Promise.all([
+        const [metricsData, entriesData, goalsData, scheduleData, gamificationData] = await Promise.all([
           api.getMetrics(),
           api.getEntries(1, 5),
           api.getGoals('active'),
+          api.getScheduleStatus(),
+          api.getGamificationStats(),
         ]);
         setMetrics(metricsData);
         setRecentEntries(entriesData.entries);
         setActiveGoals(goalsData.slice(0, 3));
+        setScheduleStatus(scheduleData);
+        setGamificationStats(gamificationData);
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
       } finally {
@@ -42,7 +52,20 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          {gamificationStats && (
+            <div className="flex items-center gap-3">
+              <LevelBadge level={gamificationStats.level} size="sm" />
+              <StreakDisplay
+                currentStreak={gamificationStats.current_streak}
+                longestStreak={gamificationStats.longest_streak}
+                size="sm"
+                showLongest={false}
+              />
+            </div>
+          )}
+        </div>
         <Link href="/journal/new">
           <Button>
             <Plus className="w-4 h-4 mr-2" />
@@ -50,6 +73,28 @@ export default function DashboardPage() {
           </Button>
         </Link>
       </div>
+
+      {scheduleStatus && <JournalPrompt scheduleStatus={scheduleStatus} />}
+
+      {gamificationStats && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                <span className="font-medium text-gray-700">Level {gamificationStats.level} Progress</span>
+              </div>
+              <span className="text-sm text-gray-500">{gamificationStats.total_xp} XP total</span>
+            </div>
+            <XPProgressBar
+              currentXP={gamificationStats.total_xp}
+              level={gamificationStats.level}
+              xpForNextLevel={gamificationStats.xp_for_next_level}
+              xpForCurrentLevel={gamificationStats.xp_for_current_level}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>

@@ -5,18 +5,21 @@ from pydantic import BaseModel
 
 
 MoodType = Literal["great", "good", "okay", "bad", "terrible"]
+JournalType = Literal["morning", "evening", "freeform"]
 
 
 class EntryCreate(BaseModel):
     title: Optional[str] = None
     content: str
     mood: Optional[MoodType] = None
+    journal_type: Optional[JournalType] = None
 
 
 class EntryUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     mood: Optional[MoodType] = None
+    journal_type: Optional[JournalType] = None
 
 
 class EntryResponse(BaseModel):
@@ -24,6 +27,7 @@ class EntryResponse(BaseModel):
     title: Optional[str]
     content: str
     mood: Optional[str]
+    journal_type: Optional[str]
     created_at: datetime
     updated_at: datetime
 

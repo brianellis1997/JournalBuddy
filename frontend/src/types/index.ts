@@ -2,17 +2,24 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  total_xp?: number;
+  level?: number;
   created_at: string;
 }
+
+export type JournalType = 'morning' | 'evening' | 'freeform';
 
 export interface JournalEntry {
   id: string;
   title?: string;
   content: string;
   mood?: 'great' | 'good' | 'okay' | 'bad' | 'terrible';
+  journal_type?: JournalType;
   created_at: string;
   updated_at: string;
 }
+
+export type JournalingSchedule = 'morning' | 'evening' | 'both';
 
 export interface Goal {
   id: string;
@@ -20,6 +27,7 @@ export interface Goal {
   description?: string;
   status: 'active' | 'completed' | 'paused' | 'abandoned';
   target_date?: string;
+  journaling_schedule?: JournalingSchedule;
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +55,46 @@ export interface Metrics {
   total_goals: number;
   active_goals: number;
   completed_goals: number;
+  total_xp: number;
+  level: number;
+  morning_completed_today: boolean;
+  evening_completed_today: boolean;
+}
+
+export interface Achievement {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked_at?: string;
+  progress?: number;
+  target?: number;
+}
+
+export interface XPEvent {
+  event_type: string;
+  xp_amount: number;
+  created_at: string;
+}
+
+export interface GamificationStats {
+  total_xp: number;
+  level: number;
+  xp_for_next_level: number;
+  xp_progress_in_level: number;
+  current_streak: number;
+  longest_streak: number;
+  achievements: Achievement[];
+  recent_xp_events: XPEvent[];
+}
+
+export interface ScheduleStatus {
+  morning_completed: boolean;
+  evening_completed: boolean;
+  morning_prompt?: string;
+  evening_prompt?: string;
+  should_show_morning: boolean;
+  should_show_evening: boolean;
 }
 
 export interface Token {

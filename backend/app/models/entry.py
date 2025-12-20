@@ -17,6 +17,7 @@ class Entry(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     mood: Mapped[str] = mapped_column(String(20), nullable=True)
+    journal_type: Mapped[str] = mapped_column(String(20), nullable=True, index=True)
     embedding = mapped_column(Vector(settings.embedding_dimension), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
