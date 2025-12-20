@@ -11,6 +11,7 @@ interface VoiceChatMessage {
 }
 
 interface UseVoiceChatOptions {
+  journalType?: 'morning' | 'evening';
   onTranscript?: (text: string, isFinal: boolean) => void;
   onAssistantText?: (text: string, isFinal: boolean) => void;
   onStateChange?: (state: VoiceChatState) => void;
@@ -19,7 +20,7 @@ interface UseVoiceChatOptions {
 }
 
 export function useVoiceChat(options: UseVoiceChatOptions = {}) {
-  const { onTranscript, onAssistantText, onStateChange, onError, onConversationEnd } = options;
+  const { journalType, onTranscript, onAssistantText, onStateChange, onError, onConversationEnd } = options;
   const { token } = useAuthStore();
 
   const [state, setState] = useState<VoiceChatState>('disconnected');
@@ -140,15 +141,16 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
 
         case 'interim_transcript':
           const transcript = message.data?.text as string || '';
-          const isFinal = message.data?.is_final as boolean || false;
           setCurrentTranscript(transcript);
-          onTranscript?.(transcript, isFinal);
-          if (!isFinal) {
-            updateState('listening');
-          }
+          onTranscript?.(transcript, false);
+          updateState('listening');
           break;
 
         case 'user_transcript':
+          const finalText = message.data?.text as string || '';
+          if (finalText.trim()) {
+            onTranscript?.(finalText, true);
+          }
           setCurrentTranscript('');
           break;
 
@@ -206,7 +208,10 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
 
     updateState('connecting');
 
-    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'}/api/v1/voice/chat?token=${token}`;
+    let wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'}/api/v1/voice/chat?token=${token}`;
+    if (journalType) {
+      wsUrl += `&journal_type=${journalType}`;
+    }
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -228,7 +233,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
       updateState('disconnected');
       cleanup();
     };
-  }, [token, handleWebSocketMessage, onError, updateState]);
+  }, [token, journalType, handleWebSocketMessage, onError, updateState]);
 
   const startRecording = useCallback(async () => {
     try {

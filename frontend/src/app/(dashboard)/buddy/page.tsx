@@ -1,14 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Phone, History } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Phone, History, Sunrise, Moon } from 'lucide-react';
 import { VoiceChatInterface } from '@/components/voice/VoiceChatInterface';
 import { VoiceSessionHistory } from '@/components/voice/VoiceSessionHistory';
 import { cn } from '@/lib/utils';
 
 type Tab = 'chat' | 'history';
+type JournalType = 'morning' | 'evening' | undefined;
 
 export default function BuddyPage() {
+  const searchParams = useSearchParams();
+  const journalType = searchParams.get('type') as JournalType;
   const [activeTab, setActiveTab] = useState<Tab>('chat');
 
   return (
@@ -38,11 +42,20 @@ export default function BuddyPage() {
           <History className="w-4 h-4" />
           Past Sessions
         </button>
+        {journalType && (
+          <div className="ml-auto flex items-center gap-2 px-6 py-3 text-sm text-gray-500">
+            {journalType === 'morning' ? (
+              <><Sunrise className="w-4 h-4 text-orange-500" /> Morning Journal</>
+            ) : (
+              <><Moon className="w-4 h-4 text-indigo-500" /> Evening Journal</>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-hidden">
         {activeTab === 'chat' ? (
-          <VoiceChatInterface />
+          <VoiceChatInterface journalType={journalType} />
         ) : (
           <div className="h-full overflow-y-auto p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">

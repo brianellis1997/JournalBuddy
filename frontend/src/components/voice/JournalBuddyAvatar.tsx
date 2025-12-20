@@ -76,7 +76,7 @@ export function JournalBuddyAvatar({ state, className, size = 'lg' }: JournalBud
         </div>
       </div>
 
-      <StateIndicator state={state} />
+      {size !== 'sm' && <StateIndicator state={state} />}
     </div>
   );
 }

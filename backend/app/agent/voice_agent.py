@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.crud.goal import goal_crud
 from app.crud.chat import chat_crud
+from app.crud.entry import entry_crud
 from app.models.goal import GoalProgressUpdate
 from app.services.embedding import embedding_service
 from app.services.vector_search import search_by_text
@@ -46,6 +47,39 @@ RULES:
 
 Remember: Goal-focused, concise, natural. Help them reflect, then wrap up."""
 
+JOURNAL_SYSTEM_PROMPT = """You are JournalBuddy, a warm and friendly AI companion helping the user with their {journal_type} journal.
+
+CRITICAL: Keep responses SHORT - 1-2 sentences max. This is voice chat, not text.
+
+YOUR PRIMARY JOB: Help the user reflect and create a meaningful journal entry.
+
+CONVERSATION STRUCTURE:
+1. Ask how they're feeling (this will become their mood)
+2. Ask about their thoughts, experiences, or intentions
+3. Listen actively and ask follow-up questions
+4. When they're done, use create_journal_entry to save their reflection
+
+MOOD DETECTION:
+Based on what the user says, detect their mood:
+- "great" - Very positive, excited, happy
+- "good" - Positive, content, satisfied
+- "okay" - Neutral, neither good nor bad
+- "bad" - Negative, frustrated, sad
+- "terrible" - Very negative, awful day
+
+AVAILABLE TOOLS:
+- create_journal_entry: When ready to save, create the entry with a title, content summary, and mood
+- end_conversation: After creating the entry, use this to wrap up
+
+RULES:
+- ONE question max per response
+- No bullet points, lists, or markdown
+- Be warm and encouraging
+- Generate a meaningful title that captures the essence of their reflection
+- The content should be a flowing summary of what they shared
+
+Remember: Help them reflect meaningfully, then save their entry."""
+
 
 class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
@@ -58,10 +92,11 @@ class AgentState(TypedDict):
 
 
 class VoiceAgentTools:
-    def __init__(self, db: AsyncSession, user_id: str, session_id: str):
+    def __init__(self, db: AsyncSession, user_id: str, session_id: str, journal_type: str = None):
         self.db = db
         self.user_id = UUID(user_id)
         self.session_id = UUID(session_id) if session_id else None
+        self.journal_type = journal_type
         self._goals_cache = {}
 
     async def load_goals(self):
@@ -118,6 +153,28 @@ class VoiceAgentTools:
     async def end_conversation(self, farewell_message: str) -> str:
         return f"END_CONVERSATION:{farewell_message}"
 
+    async def create_journal_entry(self, title: str, content: str, mood: str) -> str:
+        from app.schemas.entry import EntryCreate
+
+        valid_moods = ["great", "good", "okay", "bad", "terrible"]
+        if mood.lower() not in valid_moods:
+            mood = "okay"
+
+        entry_data = EntryCreate(
+            title=title,
+            content=content,
+            mood=mood.lower(),
+            journal_type=self.journal_type,
+        )
+
+        try:
+            entry = await entry_crud.create(self.db, entry_data, self.user_id)
+            logger.info(f"Created journal entry: {entry.id} with title '{title}'")
+            return f"Journal entry created: '{title}'"
+        except Exception as e:
+            logger.error(f"Failed to create journal entry: {e}")
+            return f"Failed to create journal entry: {e}"
+
 
 class VoiceAgent:
     def __init__(self):
@@ -149,7 +206,7 @@ class VoiceAgent:
 
         return goals_list, "\n\n".join(context_parts)
 
-    def _create_tools(self, tool_handler: VoiceAgentTools):
+    def _create_tools(self, tool_handler: VoiceAgentTools, is_journal: bool = False):
         @tool
         async def update_goal_progress(goal_title: str, new_progress: int, notes: str = "") -> str:
             """Update the progress percentage for a user's goal.
@@ -181,6 +238,19 @@ class VoiceAgent:
             """
             return await tool_handler.end_conversation(farewell_message)
 
+        @tool
+        async def create_journal_entry(title: str, content: str, mood: str) -> str:
+            """Create a journal entry from the conversation.
+
+            Args:
+                title: A meaningful title that captures the essence of their reflection (3-8 words)
+                content: A flowing summary of what the user shared during the conversation
+                mood: The user's mood - must be one of: great, good, okay, bad, terrible
+            """
+            return await tool_handler.create_journal_entry(title, content, mood)
+
+        if is_journal:
+            return [create_journal_entry, end_conversation]
         return [update_goal_progress, save_session_summary, end_conversation]
 
     async def chat_stream(
@@ -190,16 +260,23 @@ class VoiceAgent:
         session_id: str,
         user_message: str,
         chat_history: list,
+        journal_type: str = None,
     ) -> AsyncGenerator[str, None]:
-        tool_handler = VoiceAgentTools(db, user_id, session_id)
+        is_journal = journal_type in ["morning", "evening"]
+        tool_handler = VoiceAgentTools(db, user_id, session_id, journal_type=journal_type)
         await tool_handler.load_goals()
 
         goals, context = await self.get_context(db, user_id, user_message)
-        tools = self._create_tools(tool_handler)
+        tools = self._create_tools(tool_handler, is_journal=is_journal)
         llm_with_tools = self.llm.bind_tools(tools, tool_choice="auto")
 
-        messages = [SystemMessage(content=VOICE_SYSTEM_PROMPT)]
-        if context:
+        if is_journal:
+            system_prompt = JOURNAL_SYSTEM_PROMPT.format(journal_type=journal_type)
+        else:
+            system_prompt = VOICE_SYSTEM_PROMPT
+
+        messages = [SystemMessage(content=system_prompt)]
+        if context and not is_journal:
             messages.append(SystemMessage(content=f"Context about this user:\n{context}"))
 
         for msg in chat_history[-10:]:
@@ -237,6 +314,8 @@ class VoiceAgent:
                     result = await tool_handler.update_goal_progress(**tool_args)
                 elif tool_name == "save_session_summary":
                     result = await tool_handler.save_session_summary(**tool_args)
+                elif tool_name == "create_journal_entry":
+                    result = await tool_handler.create_journal_entry(**tool_args)
                 elif tool_name == "end_conversation":
                     result = await tool_handler.end_conversation(**tool_args)
                     if result.startswith("END_CONVERSATION:"):

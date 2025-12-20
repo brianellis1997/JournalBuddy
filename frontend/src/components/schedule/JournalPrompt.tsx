@@ -1,6 +1,6 @@
 'use client';
 
-import { Sunrise, Moon, CheckCircle } from 'lucide-react';
+import { Sunrise, Moon, CheckCircle, Mic } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -58,24 +58,44 @@ export function JournalPrompt({ scheduleStatus, className }: JournalPromptProps)
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {showMorning && (
-            <Button
-              onClick={() => router.push('/journal/new?type=morning')}
-              className="flex items-center gap-2"
-            >
-              <Sunrise size={18} />
-              Morning Journal
-            </Button>
+            <>
+              <Button
+                onClick={() => router.push('/journal/new?type=morning')}
+                className="flex items-center gap-2"
+              >
+                <Sunrise size={18} />
+                Write
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/buddy?type=morning')}
+                className="flex items-center gap-2"
+              >
+                <Mic size={18} />
+                Talk to Buddy
+              </Button>
+            </>
           )}
           {showEvening && (
-            <Button
-              onClick={() => router.push('/journal/new?type=evening')}
-              className="flex items-center gap-2"
-            >
-              <Moon size={18} />
-              Evening Journal
-            </Button>
+            <>
+              <Button
+                onClick={() => router.push('/journal/new?type=evening')}
+                className="flex items-center gap-2"
+              >
+                <Moon size={18} />
+                Write
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/buddy?type=evening')}
+                className="flex items-center gap-2"
+              >
+                <Mic size={18} />
+                Talk to Buddy
+              </Button>
+            </>
           )}
         </div>
       </div>

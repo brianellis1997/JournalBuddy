@@ -39,7 +39,11 @@ interface Message {
   timestamp: Date;
 }
 
-export function VoiceChatInterface() {
+interface VoiceChatInterfaceProps {
+  journalType?: 'morning' | 'evening';
+}
+
+export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUserTranscript, setCurrentUserTranscript] = useState('');
   const [currentAssistantText, setCurrentAssistantText] = useState('');
@@ -56,6 +60,7 @@ export function VoiceChatInterface() {
     disconnect,
     interrupt,
   } = useVoiceChat({
+    journalType,
     onTranscript: (text, isFinal) => {
       setCurrentUserTranscript(text);
       if (isFinal && text.trim()) {
@@ -117,137 +122,149 @@ export function VoiceChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <JournalBuddyAvatar state={state} size="lg" />
-
-        <div className="mt-16 w-full max-w-2xl">
-          {state === 'disconnected' ? (
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Talk with JournalBuddy
-              </h2>
-              <p className="text-gray-600 mb-8">
-                Start a voice conversation with your AI journaling companion.
-                Share your thoughts, reflect on your day, or just chat.
-              </p>
-              <Button size="lg" onClick={handleStartCall} className="gap-2">
-                <Phone className="w-5 h-5" />
-                Start Conversation
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="bg-white rounded-xl shadow-lg border border-gray-200 max-h-64 overflow-y-auto p-4 mb-4">
-                {messages.length === 0 && !currentUserTranscript && !currentAssistantText && state !== 'thinking' && (
-                  <p className="text-gray-400 text-center text-sm">
-                    Conversation will appear here...
-                  </p>
-                )}
-
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      'mb-3 p-3 rounded-lg',
-                      message.role === 'user'
-                        ? 'bg-primary-50 ml-8'
-                        : 'bg-gray-50 mr-8'
-                    )}
-                  >
-                    <p className="text-xs text-gray-400 mb-1">
-                      {message.role === 'user' ? 'You' : 'JournalBuddy'}
-                    </p>
-                    <p className="text-gray-800">{message.content}</p>
-                  </div>
-                ))}
-
-                {currentUserTranscript && (
-                  <div className="mb-3 p-3 rounded-lg bg-primary-50 ml-8 opacity-70">
-                    <p className="text-xs text-gray-400 mb-1">You (listening...)</p>
-                    <p className="text-gray-800">{currentUserTranscript}</p>
-                  </div>
-                )}
-
-                {(currentAssistantText || state === 'thinking') && (
-                  <div className="mb-3 p-3 rounded-lg bg-gray-50 mr-8">
-                    <p className="text-xs text-gray-400 mb-1">JournalBuddy</p>
-                    {state === 'thinking' && !currentAssistantText ? (
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                    ) : (
-                      <p className="text-gray-800">{currentAssistantText}</p>
-                    )}
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-
-              <div className="flex justify-center gap-4">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setIsMuted(!isMuted)}
-                  className={cn(isMuted && 'bg-red-50 border-red-200')}
-                >
-                  {isMuted ? <MicOff className="w-5 h-5 text-red-500" /> : <Mic className="w-5 h-5" />}
-                </Button>
-
-                {state === 'speaking' && (
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={handleInterrupt}
-                    className="gap-2"
-                  >
-                    <VolumeX className="w-5 h-5" />
-                    Interrupt
-                  </Button>
-                )}
-
-                <Button
-                  variant="danger"
-                  size="lg"
-                  onClick={handleEndCall}
-                  className="gap-2"
-                >
-                  <PhoneOff className="w-5 h-5" />
-                  End
-                </Button>
-              </div>
-            </>
-          )}
-
+    <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
+      {state === 'disconnected' ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <JournalBuddyAvatar state={state} size="lg" />
+          <div className="mt-12 text-center max-w-md">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Talk with JournalBuddy
+            </h2>
+            <p className="text-gray-600 mb-8">
+              Start a voice conversation with your AI journaling companion.
+              Share your thoughts, reflect on your day, or just chat.
+            </p>
+            <Button size="lg" onClick={handleStartCall} className="gap-2">
+              <Phone className="w-5 h-5" />
+              Start Conversation
+            </Button>
+          </div>
           {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm text-center">
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm text-center max-w-md">
               {error}
             </div>
           )}
         </div>
-      </div>
-
-      {isConnected && (
-        <div className="p-4 border-t bg-gray-50">
-          <div className="flex items-center justify-center gap-4">
-            {(state === 'listening' || state === 'idle') && !conversationEnded && (
-              <AmplitudeVisualizer amplitude={amplitude} />
-            )}
-            <p className="text-sm text-gray-500">
-              {conversationEnded && 'Conversation complete! Disconnecting...'}
-              {!conversationEnded && state === 'listening' && 'Listening to you...'}
-              {!conversationEnded && state === 'thinking' && 'JournalBuddy is thinking...'}
-              {!conversationEnded && state === 'speaking' && 'JournalBuddy is speaking... (click Interrupt to stop)'}
-              {!conversationEnded && state === 'idle' && 'Say something to continue the conversation'}
-            </p>
-            {(state === 'listening' || state === 'idle') && !conversationEnded && (
-              <AmplitudeVisualizer amplitude={amplitude} />
-            )}
+      ) : (
+        <>
+          <div className="flex items-center justify-between p-4 border-b bg-white">
+            <div className="flex items-center gap-3">
+              <JournalBuddyAvatar state={state} size="sm" />
+              <div>
+                <p className="font-medium text-gray-900">JournalBuddy</p>
+                <p className="text-sm text-gray-500">
+                  {conversationEnded ? 'Conversation complete' :
+                   state === 'listening' ? 'Listening...' :
+                   state === 'thinking' ? 'Thinking...' :
+                   state === 'speaking' ? 'Speaking...' :
+                   'Ready to chat'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsMuted(!isMuted)}
+                className={cn('h-9 w-9 p-0', isMuted && 'bg-red-50 border-red-200')}
+              >
+                {isMuted ? <MicOff className="w-4 h-4 text-red-500" /> : <Mic className="w-4 h-4" />}
+              </Button>
+              {state === 'speaking' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleInterrupt}
+                  className="h-9 px-3 gap-1"
+                >
+                  <VolumeX className="w-4 h-4" />
+                  Stop
+                </Button>
+              )}
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleEndCall}
+                className="h-9 px-3 gap-1"
+              >
+                <PhoneOff className="w-4 h-4" />
+                End
+              </Button>
+            </div>
           </div>
-        </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="max-w-2xl mx-auto space-y-4">
+              {messages.length === 0 && !currentUserTranscript && !currentAssistantText && state !== 'thinking' && (
+                <p className="text-gray-400 text-center text-sm py-8">
+                  Speak to start the conversation...
+                </p>
+              )}
+
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    'p-4 rounded-xl max-w-[85%]',
+                    message.role === 'user'
+                      ? 'bg-primary-500 text-white ml-auto'
+                      : 'bg-white border border-gray-200 shadow-sm'
+                  )}
+                >
+                  <p className={message.role === 'user' ? 'text-white' : 'text-gray-800'}>
+                    {message.content}
+                  </p>
+                </div>
+              ))}
+
+              {currentUserTranscript && (
+                <div className="p-4 rounded-xl max-w-[85%] ml-auto bg-primary-200 text-primary-900">
+                  <p>{currentUserTranscript}</p>
+                </div>
+              )}
+
+              {(currentAssistantText || state === 'thinking') && (
+                <div className="p-4 rounded-xl max-w-[85%] bg-white border border-gray-200 shadow-sm">
+                  {state === 'thinking' && !currentAssistantText ? (
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  ) : (
+                    <p className="text-gray-800">{currentAssistantText}</p>
+                  )}
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+
+          <div className="p-4 border-t bg-white">
+            <div className="flex items-center justify-center gap-4">
+              {(state === 'listening' || state === 'idle') && !conversationEnded && (
+                <AmplitudeVisualizer amplitude={amplitude} />
+              )}
+              <p className="text-sm text-gray-500">
+                {conversationEnded && 'Disconnecting...'}
+                {!conversationEnded && state === 'listening' && 'Listening...'}
+                {!conversationEnded && state === 'thinking' && 'Processing...'}
+                {!conversationEnded && state === 'speaking' && 'Speaking...'}
+                {!conversationEnded && state === 'idle' && 'Say something to continue'}
+              </p>
+              {(state === 'listening' || state === 'idle') && !conversationEnded && (
+                <AmplitudeVisualizer amplitude={amplitude} />
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+              {error}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

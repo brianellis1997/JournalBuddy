@@ -18,10 +18,11 @@ router = APIRouter()
 
 
 class VoiceChatSession:
-    def __init__(self, websocket: WebSocket, user_id: str, db: AsyncSession):
+    def __init__(self, websocket: WebSocket, user_id: str, db: AsyncSession, journal_type: Optional[str] = None):
         self.websocket = websocket
         self.user_id = user_id
         self.db = db
+        self.journal_type = journal_type
         self.deepgram = DeepgramStreamManager()
         self.cartesia = CartesiaStreamManager()
         self.chat_history: list[dict] = []
@@ -108,6 +109,7 @@ class VoiceChatSession:
                     str(self.db_session_id) if self.db_session_id else "",
                     user_message,
                     self.chat_history[:-1],
+                    journal_type=self.journal_type,
                 ):
                     if self._cancelled:
                         return
@@ -233,6 +235,7 @@ class VoiceChatSession:
 async def voice_chat(
     websocket: WebSocket,
     token: str = None,
+    journal_type: str = None,
     db: AsyncSession = Depends(get_db),
 ):
     await websocket.accept()
@@ -246,7 +249,7 @@ async def voice_chat(
         await websocket.close(code=4001)
         return
 
-    session = VoiceChatSession(websocket, str(user.id), db)
+    session = VoiceChatSession(websocket, str(user.id), db, journal_type=journal_type)
 
     try:
         await session.create_db_session()
@@ -259,7 +262,12 @@ async def voice_chat(
 
         await session.send_message("ready")
 
-        greeting = "Hey there! How are you doing today?"
+        if journal_type == "morning":
+            greeting = "Good morning! Let's start your day with some reflection. How are you feeling this morning?"
+        elif journal_type == "evening":
+            greeting = "Good evening! Let's reflect on your day. How did things go today?"
+        else:
+            greeting = "Hey there! How are you doing today?"
         await session.send_message("assistant_text", {"text": greeting, "is_final": False})
         await session.send_message("assistant_speaking")
 
