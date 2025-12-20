@@ -26,6 +26,8 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [assistantText, setAssistantText] = useState('');
 
+  const [amplitude, setAmplitude] = useState(0);
+
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -33,6 +35,9 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
   const audioQueueRef = useRef<ArrayBuffer[]>([]);
   const isPlayingRef = useRef(false);
   const nextPlayTimeRef = useRef(0);
+  const inputAudioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   const updateState = useCallback((newState: VoiceChatState) => {
     setState(newState);
@@ -89,6 +94,20 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+  }, []);
+
+  const updateAmplitude = useCallback(() => {
+    if (!analyserRef.current) return;
+
+    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+    analyserRef.current.getByteFrequencyData(dataArray);
+
+    const sum = dataArray.reduce((acc, val) => acc + val, 0);
+    const avg = sum / dataArray.length;
+    const normalizedAmplitude = Math.min(avg / 128, 1);
+
+    setAmplitude(normalizedAmplitude);
+    animationFrameRef.current = requestAnimationFrame(updateAmplitude);
   }, []);
 
   const sendMessage = useCallback((type: string, data?: Record<string, unknown>) => {
@@ -216,6 +235,15 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
       });
       streamRef.current = stream;
 
+      const inputAudioContext = new AudioContext();
+      inputAudioContextRef.current = inputAudioContext;
+      const source = inputAudioContext.createMediaStreamSource(stream);
+      const analyser = inputAudioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+      animationFrameRef.current = requestAnimationFrame(updateAmplitude);
+
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
           ? 'audio/webm;codecs=opus'
@@ -236,9 +264,20 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
       console.error('Failed to start recording:', err);
       onError?.('Failed to access microphone');
     }
-  }, [onError, updateState]);
+  }, [onError, updateState, updateAmplitude]);
 
   const stopRecording = useCallback(() => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (inputAudioContextRef.current) {
+      inputAudioContextRef.current.close();
+      inputAudioContextRef.current = null;
+    }
+    analyserRef.current = null;
+    setAmplitude(0);
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
@@ -292,6 +331,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
     isConnected,
     currentTranscript,
     assistantText,
+    amplitude,
     start,
     disconnect,
     interrupt,

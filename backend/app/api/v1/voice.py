@@ -28,7 +28,10 @@ class VoiceChatSession:
         self._cancelled = False
 
     async def send_message(self, msg_type: str, data: dict = None):
-        await self.websocket.send_json({"type": msg_type, "data": data or {}})
+        try:
+            await self.websocket.send_json({"type": msg_type, "data": data or {}})
+        except Exception as e:
+            logger.warning(f"Failed to send WebSocket message: {e}")
 
     async def handle_user_audio(self, audio_data: bytes):
         if self.deepgram.is_connected:
@@ -79,7 +82,11 @@ class VoiceChatSession:
             async for audio_chunk in self.cartesia.synthesize_streaming(text_generator()):
                 if self._cancelled:
                     break
-                await self.websocket.send_bytes(audio_chunk)
+                try:
+                    await self.websocket.send_bytes(audio_chunk)
+                except Exception as e:
+                    logger.warning(f"Failed to send audio chunk: {e}")
+                    break
 
             if not self._cancelled:
                 self.chat_history.append({"role": "assistant", "content": full_response})
@@ -188,7 +195,11 @@ async def voice_chat(
         await session.send_message("assistant_speaking")
 
         async for audio_chunk in session.cartesia.synthesize_streaming(async_generator_from_string(greeting)):
-            await websocket.send_bytes(audio_chunk)
+            try:
+                await websocket.send_bytes(audio_chunk)
+            except Exception as e:
+                logger.warning(f"Failed to send greeting audio: {e}")
+                break
 
         session.chat_history.append({"role": "assistant", "content": greeting})
         await session.send_message("assistant_text", {"text": "", "is_final": True})

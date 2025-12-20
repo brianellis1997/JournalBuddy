@@ -32,8 +32,6 @@ class DeepgramStreamManager:
                 "&utterance_end_ms=1000"
                 "&vad_events=true"
                 "&endpointing=300"
-                "&encoding=linear16"
-                "&sample_rate=16000"
             )
 
             self.websocket = await websockets.connect(

@@ -7,6 +7,31 @@ import { JournalBuddyAvatar } from './JournalBuddyAvatar';
 import { useVoiceChat, VoiceChatState } from '@/hooks/useVoiceChat';
 import { cn } from '@/lib/utils';
 
+function AmplitudeVisualizer({ amplitude }: { amplitude: number }) {
+  const bars = 5;
+  return (
+    <div className="flex items-center gap-1 h-8">
+      {Array.from({ length: bars }).map((_, i) => {
+        const threshold = (i + 1) / bars;
+        const isActive = amplitude >= threshold * 0.5;
+        const baseHeight = 12 + (i * 4);
+        return (
+          <div
+            key={i}
+            className={cn(
+              'w-1.5 rounded-full transition-all duration-75',
+              isActive ? 'bg-primary-500' : 'bg-gray-300'
+            )}
+            style={{
+              height: isActive ? `${baseHeight + amplitude * 16}px` : `${baseHeight}px`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -25,6 +50,7 @@ export function VoiceChatInterface() {
   const {
     state,
     isConnected,
+    amplitude,
     start,
     disconnect,
     interrupt,
@@ -200,12 +226,20 @@ export function VoiceChatInterface() {
 
       {isConnected && (
         <div className="p-4 border-t bg-gray-50">
-          <p className="text-center text-sm text-gray-500">
-            {state === 'listening' && 'Listening to you...'}
-            {state === 'thinking' && 'JournalBuddy is thinking...'}
-            {state === 'speaking' && 'JournalBuddy is speaking... (click Interrupt to stop)'}
-            {state === 'idle' && 'Say something to continue the conversation'}
-          </p>
+          <div className="flex items-center justify-center gap-4">
+            {(state === 'listening' || state === 'idle') && (
+              <AmplitudeVisualizer amplitude={amplitude} />
+            )}
+            <p className="text-sm text-gray-500">
+              {state === 'listening' && 'Listening to you...'}
+              {state === 'thinking' && 'JournalBuddy is thinking...'}
+              {state === 'speaking' && 'JournalBuddy is speaking... (click Interrupt to stop)'}
+              {state === 'idle' && 'Say something to continue the conversation'}
+            </p>
+            {(state === 'listening' || state === 'idle') && (
+              <AmplitudeVisualizer amplitude={amplitude} />
+            )}
+          </div>
         </div>
       )}
     </div>
