@@ -333,9 +333,9 @@ export default function NewEntryPage() {
       )}
 
       {mode === 'chat' && (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden -mx-6 -mb-6 rounded-none border-x-0 border-b-0">
           <CardContent className="p-0">
-            <div className="flex flex-col h-[600px]">
+            <div className="flex flex-col h-[calc(100vh-12rem)]">
               <div className="p-4 border-b bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div>
@@ -465,9 +465,9 @@ export default function NewEntryPage() {
       )}
 
       {mode === 'voice' && (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden -mx-6 -mb-6 rounded-none border-x-0 border-b-0">
           <CardContent className="p-0">
-            <div className="h-[600px]">
+            <div className="h-[calc(100vh-12rem)]">
               <VoiceChatInterface journalType={journalType === 'freeform' ? undefined : journalType} />
             </div>
           </CardContent>

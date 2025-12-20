@@ -1,12 +1,13 @@
 import json
 import logging
-from typing import Annotated, TypedDict, Literal, AsyncGenerator
+from typing import Annotated, TypedDict, Literal, AsyncGenerator, List, Dict
 from uuid import UUID
 
+import tiktoken
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage, BaseMessage
 from langchain_core.tools import tool
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +20,75 @@ from app.services.embedding import embedding_service
 from app.services.vector_search import search_by_text
 
 logger = logging.getLogger(__name__)
+
+MAX_CONTEXT_TOKENS = 64000
+RESPONSE_RESERVE_TOKENS = 1000
+
+
+class ConversationMemory:
+    def __init__(self, max_tokens: int = MAX_CONTEXT_TOKENS):
+        self.max_tokens = max_tokens
+        try:
+            self.tokenizer = tiktoken.get_encoding("cl100k_base")
+        except Exception:
+            self.tokenizer = tiktoken.get_encoding("gpt2")
+
+    def count_tokens(self, text: str) -> int:
+        if not text:
+            return 0
+        return len(self.tokenizer.encode(text))
+
+    def count_message_tokens(self, message: BaseMessage) -> int:
+        content = message.content if isinstance(message.content, str) else str(message.content)
+        tokens = self.count_tokens(content) + 4
+        if hasattr(message, 'tool_calls') and message.tool_calls:
+            tokens += 50
+        return tokens
+
+    def trim_messages_to_fit(
+        self,
+        system_messages: List[BaseMessage],
+        chat_history: List[Dict],
+        current_message: str,
+        reserve_tokens: int = RESPONSE_RESERVE_TOKENS
+    ) -> List[BaseMessage]:
+        available_tokens = self.max_tokens - reserve_tokens
+
+        system_tokens = sum(self.count_message_tokens(m) for m in system_messages)
+        current_msg_tokens = self.count_tokens(current_message) + 4
+
+        remaining_tokens = available_tokens - system_tokens - current_msg_tokens
+
+        if remaining_tokens <= 0:
+            logger.warning(f"System prompt too large: {system_tokens} tokens, available: {available_tokens}")
+            return system_messages + [HumanMessage(content=current_message)]
+
+        history_messages = []
+        total_history_tokens = 0
+
+        for msg in reversed(chat_history):
+            content = msg.get("content", "")
+            role = msg.get("role", "user")
+            msg_tokens = self.count_tokens(content) + 4
+
+            if total_history_tokens + msg_tokens > remaining_tokens:
+                break
+
+            if role == "user":
+                history_messages.insert(0, HumanMessage(content=content))
+            else:
+                history_messages.insert(0, AIMessage(content=content))
+
+            total_history_tokens += msg_tokens
+
+        logger.info(f"Token-based memory: {len(chat_history)} msgs -> {len(history_messages)} kept. "
+                   f"Tokens: system={system_tokens}, history={total_history_tokens}, "
+                   f"current={current_msg_tokens}, total={system_tokens + total_history_tokens + current_msg_tokens}/{available_tokens}")
+
+        return system_messages + history_messages + [HumanMessage(content=current_message)]
+
+
+conversation_memory = ConversationMemory()
 
 VOICE_SYSTEM_PROMPT = """You are JournalBuddy, a warm and friendly AI companion having a natural voice conversation.
 
@@ -36,6 +106,7 @@ CONVERSATION STRUCTURE:
 AVAILABLE TOOLS:
 - update_goal_progress: When user reports progress on a goal, update it (0-100%)
 - save_session_summary: At the end, summarize what you discussed
+- recall_memory: Search past journal entries when user mentions something from before
 - end_conversation: When conversation is complete, use this to sign off
 
 RULES:
@@ -57,7 +128,19 @@ CONVERSATION STRUCTURE:
 1. Ask how they're feeling (this will become their mood)
 2. Ask about their thoughts, experiences, or intentions
 3. Listen actively and ask follow-up questions
-4. When they're done, use create_journal_entry to save their reflection
+4. When they seem done (say "no", "nothing", "that's it", etc.), use create_journal_entry to save their reflection
+5. After creating the entry, use end_conversation to say goodbye
+
+MEMORY IS CRITICAL:
+- You MUST remember everything the user has shared in this conversation
+- Reference specific details they mentioned (names, events, feelings)
+- If they ask "do you remember?", summarize what they've told you
+- Never ask them to repeat what they already said
+
+HANDLING SHORT RESPONSES:
+- If user says "no", "nothing", "nope", "that's all" - they're done, save the entry
+- If user says "yes", "yeah", "uh huh" - acknowledge and continue the conversation
+- If unsure what they mean, briefly acknowledge and ask a clarifying question
 
 MOOD DETECTION:
 Based on what the user says, detect their mood:
@@ -68,6 +151,7 @@ Based on what the user says, detect their mood:
 - "terrible" - Very negative, awful day
 
 AVAILABLE TOOLS:
+- recall_memory: Search past journal entries when the user mentions something from before, or to find patterns
 - create_journal_entry: When ready to save, create the entry with a title, content summary, and mood
 - end_conversation: After creating the entry, use this to wrap up
 
@@ -77,6 +161,7 @@ RULES:
 - Be warm and encouraging
 - Generate a meaningful title that captures the essence of their reflection
 - The content should be a flowing summary of what they shared
+- ALWAYS respond - never return an empty response
 
 Remember: Help them reflect meaningfully, then save their entry."""
 
@@ -152,6 +237,28 @@ class VoiceAgentTools:
 
     async def end_conversation(self, farewell_message: str) -> str:
         return f"END_CONVERSATION:{farewell_message}"
+
+    async def recall_memory(self, query: str) -> str:
+        try:
+            similar_entries = await search_by_text(
+                self.db, query, str(self.user_id), embedding_service, limit=3
+            )
+            if not similar_entries:
+                return "No relevant past entries found."
+
+            results = []
+            for entry in similar_entries:
+                date = entry.get('created_at', '')[:10] if entry.get('created_at') else 'Unknown date'
+                title = entry.get('title', 'Untitled')
+                content = entry.get('content', '')[:200]
+                mood = entry.get('mood', '')
+                results.append(f"[{date}] {title} (mood: {mood}): {content}...")
+
+            logger.info(f"Recall memory found {len(similar_entries)} entries for query: {query[:50]}")
+            return "Past journal entries:\n" + "\n\n".join(results)
+        except Exception as e:
+            logger.error(f"Error in recall_memory: {e}")
+            return "Unable to search past entries."
 
     async def create_journal_entry(self, title: str, content: str, mood: str) -> str:
         from app.schemas.entry import EntryCreate
@@ -270,9 +377,22 @@ class VoiceAgent:
             """
             return await tool_handler.create_journal_entry(title, content, mood)
 
+        @tool
+        async def recall_memory(query: str) -> str:
+            """Search the user's past journal entries for relevant context. Use this when:
+            - The user mentions something from the past
+            - You want to reference their previous experiences
+            - They ask about patterns or recurring themes
+            - You want to provide personalized insights
+
+            Args:
+                query: What to search for in past entries (e.g., "feeling anxious", "dad", "work stress")
+            """
+            return await tool_handler.recall_memory(query)
+
         if is_journal:
-            return [create_journal_entry, end_conversation]
-        return [update_goal_progress, save_session_summary, end_conversation]
+            return [create_journal_entry, recall_memory, end_conversation]
+        return [update_goal_progress, save_session_summary, recall_memory, end_conversation]
 
     async def chat_stream(
         self,
@@ -296,34 +416,39 @@ class VoiceAgent:
         else:
             system_prompt = VOICE_SYSTEM_PROMPT
 
-        messages = [SystemMessage(content=system_prompt)]
+        system_messages = [SystemMessage(content=system_prompt)]
         if context and not is_journal:
-            messages.append(SystemMessage(content=f"Context about this user:\n{context}"))
+            system_messages.append(SystemMessage(content=f"Context about this user:\n{context}"))
 
-        for msg in chat_history[-10:]:
-            if msg["role"] == "user":
-                messages.append(HumanMessage(content=msg["content"]))
-            else:
-                messages.append(AIMessage(content=msg["content"]))
-
-        messages.append(HumanMessage(content=user_message))
+        messages = conversation_memory.trim_messages_to_fit(
+            system_messages=system_messages,
+            chat_history=chat_history,
+            current_message=user_message
+        )
 
         max_iterations = 5
         for iteration in range(max_iterations):
             try:
+                logger.info(f"Sending to LLM (iteration {iteration}), message count: {len(messages)}")
                 response = await llm_with_tools.ainvoke(messages)
+                logger.info(f"LLM response: content_len={len(response.content) if response.content else 0}, tool_calls={len(response.tool_calls) if response.tool_calls else 0}")
             except Exception as e:
-                logger.error(f"LLM error: {e}")
-                yield "Sorry, I had trouble processing that. What were you saying?"
+                logger.error(f"LLM error on iteration {iteration}: {e}", exc_info=True)
+                if iteration < max_iterations - 1:
+                    continue
+                yield "I'm here listening. Could you tell me more?"
                 return
 
             if not response.tool_calls:
-                if response.content:
+                if response.content and response.content.strip():
                     yield response.content
                 else:
-                    logger.warning(f"LLM returned empty response on iteration {iteration}")
+                    logger.warning(f"LLM returned empty response on iteration {iteration}, user_message was: {user_message[:50]}")
                     if iteration == 0:
-                        yield "Hmm, let me think about that. What were you saying?"
+                        if is_journal:
+                            yield "I hear you. Would you like to add anything else, or should I save this as your journal entry?"
+                        else:
+                            yield "I'm with you. Is there anything else on your mind?"
                 return
 
             end_conversation_called = False
@@ -341,6 +466,8 @@ class VoiceAgent:
                     result = await tool_handler.save_session_summary(**tool_args)
                 elif tool_name == "create_journal_entry":
                     result = await tool_handler.create_journal_entry(**tool_args)
+                elif tool_name == "recall_memory":
+                    result = await tool_handler.recall_memory(**tool_args)
                 elif tool_name == "end_conversation":
                     result = await tool_handler.end_conversation(**tool_args)
                     if result.startswith("END_CONVERSATION:"):
