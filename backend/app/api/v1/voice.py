@@ -118,6 +118,14 @@ class VoiceChatSession:
                         end_signal_received = True
                         self.should_end_conversation = True
                         return
+                    if chunk.startswith("__TOOL_START:") and chunk.endswith("__"):
+                        tool_name = chunk.replace("__TOOL_START:", "").replace("__", "")
+                        await self.send_message("tool_call", {"tool": tool_name, "status": "start"})
+                        continue
+                    if chunk.startswith("__TOOL_DONE:") and chunk.endswith("__"):
+                        tool_name = chunk.replace("__TOOL_DONE:", "").replace("__", "")
+                        await self.send_message("tool_call", {"tool": tool_name, "status": "done"})
+                        continue
                     if chunk and chunk.strip():
                         full_response += chunk
                         has_sent_text = True

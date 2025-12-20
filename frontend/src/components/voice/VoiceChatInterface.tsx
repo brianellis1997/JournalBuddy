@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Phone, PhoneOff, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { JournalBuddyAvatar } from './JournalBuddyAvatar';
+import { ToolActivityDisplay } from './ToolActivityPill';
 import { useVoiceChat, VoiceChatState } from '@/hooks/useVoiceChat';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +58,7 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
     isConnected,
     amplitude,
     conversationEnded,
+    activeTools,
     start,
     disconnect,
     interrupt,
@@ -253,7 +255,8 @@ export function VoiceChatInterface({ journalType }: VoiceChatInterfaceProps) {
             </div>
           </div>
 
-          <div className="p-4 border-t bg-white">
+          <div className="p-4 border-t bg-white space-y-2">
+            <ToolActivityDisplay activeTools={activeTools} />
             <div className="flex items-center justify-center gap-4">
               {(state === 'listening' || state === 'idle') && !conversationEnded && (
                 <AmplitudeVisualizer amplitude={amplitude} />

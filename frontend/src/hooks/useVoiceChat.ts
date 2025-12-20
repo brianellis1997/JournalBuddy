@@ -10,6 +10,12 @@ interface VoiceChatMessage {
   data?: Record<string, unknown>;
 }
 
+export interface ToolCall {
+  tool: string;
+  status: 'start' | 'done';
+  timestamp: Date;
+}
+
 interface UseVoiceChatOptions {
   journalType?: 'morning' | 'evening';
   onTranscript?: (text: string, isFinal: boolean) => void;
@@ -17,10 +23,11 @@ interface UseVoiceChatOptions {
   onStateChange?: (state: VoiceChatState) => void;
   onError?: (error: string) => void;
   onConversationEnd?: () => void;
+  onToolCall?: (toolCall: ToolCall) => void;
 }
 
 export function useVoiceChat(options: UseVoiceChatOptions = {}) {
-  const { journalType, onTranscript, onAssistantText, onStateChange, onError, onConversationEnd } = options;
+  const { journalType, onTranscript, onAssistantText, onStateChange, onError, onConversationEnd, onToolCall } = options;
   const { token } = useAuthStore();
 
   const [state, setState] = useState<VoiceChatState>('disconnected');
@@ -28,6 +35,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [assistantText, setAssistantText] = useState('');
   const [conversationEnded, setConversationEnded] = useState(false);
+  const [activeTools, setActiveTools] = useState<ToolCall[]>([]);
 
   const [amplitude, setAmplitude] = useState(0);
 
@@ -204,13 +212,29 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
           onConversationEnd?.();
           break;
 
+        case 'tool_call':
+          const toolName = message.data?.tool as string;
+          const toolStatus = message.data?.status as 'start' | 'done';
+          const toolCall: ToolCall = {
+            tool: toolName,
+            status: toolStatus,
+            timestamp: new Date(),
+          };
+          if (toolStatus === 'start') {
+            setActiveTools(prev => [...prev, toolCall]);
+          } else {
+            setActiveTools(prev => prev.filter(t => t.tool !== toolName || t.status !== 'start'));
+          }
+          onToolCall?.(toolCall);
+          break;
+
         case 'pong':
           break;
       }
     } catch (e) {
       console.error('Failed to parse WebSocket message:', e);
     }
-  }, [onTranscript, onAssistantText, onError, onConversationEnd, updateState, processAudioQueue, stopAudioPlayback]);
+  }, [onTranscript, onAssistantText, onError, onConversationEnd, onToolCall, updateState, processAudioQueue, stopAudioPlayback]);
 
   const connect = useCallback(async () => {
     if (!token) {
@@ -357,6 +381,7 @@ export function useVoiceChat(options: UseVoiceChatOptions = {}) {
     assistantText,
     amplitude,
     conversationEnded,
+    activeTools,
     start,
     disconnect,
     interrupt,
