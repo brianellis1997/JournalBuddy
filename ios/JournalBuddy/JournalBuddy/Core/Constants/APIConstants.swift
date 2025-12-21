@@ -1,0 +1,49 @@
+import Foundation
+
+enum APIConstants {
+    #if DEBUG
+    static let baseURL = URL(string: "http://localhost:8000/api/v1")!
+    static let wsBaseURL = URL(string: "ws://localhost:8000/api/v1")!
+    #else
+    static let baseURL = URL(string: "https://api.journalbuddy.app/api/v1")!
+    static let wsBaseURL = URL(string: "wss://api.journalbuddy.app/api/v1")!
+    #endif
+
+    enum Endpoints {
+        // Auth
+        static let login = "/auth/login"
+        static let signup = "/auth/signup"
+        static let me = "/auth/me"
+        static let refresh = "/auth/refresh"
+
+        // Entries
+        static let entries = "/entries"
+        static func entry(_ id: UUID) -> String { "/entries/\(id)" }
+        static func similarEntries(_ id: UUID) -> String { "/entries/\(id)/similar" }
+
+        // Goals
+        static let goals = "/goals"
+        static func goal(_ id: UUID) -> String { "/goals/\(id)" }
+
+        // Chat
+        static let chatSessions = "/chat/sessions"
+        static func chatSession(_ id: UUID) -> String { "/chat/sessions/\(id)" }
+        static func chatMessages(_ id: UUID) -> String { "/chat/sessions/\(id)/messages" }
+
+        // Gamification
+        static let gamificationStats = "/gamification/stats"
+        static let achievements = "/gamification/achievements"
+        static let scheduleStatus = "/gamification/schedule-status"
+
+        // Metrics
+        static let metrics = "/metrics"
+
+        // Summaries
+        static let summaries = "/summaries"
+        static let weeklySummary = "/summaries/weekly"
+        static let monthlySummary = "/summaries/monthly"
+
+        // Voice WebSocket
+        static let voiceChat = "/voice/chat"
+    }
+}

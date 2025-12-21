@@ -64,3 +64,17 @@ htmlcov/
 # Logs
 *.log
 logs/
+
+# iOS / Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.hmap
+*.xccheckout
+*.moved-aside
+*.xcscmblueprint
+*.xcworkspace
+!*.xcodeproj/project.xcworkspace/
