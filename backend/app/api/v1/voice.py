@@ -439,7 +439,10 @@ async def voice_chat(
         logger.info(f"WebSocket disconnected for user {user.id}")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
-        await session.send_message("error", {"message": str(e)})
+        try:
+            await session.send_message("error", {"message": str(e)})
+        except Exception:
+            pass
     finally:
         await session.close()
 

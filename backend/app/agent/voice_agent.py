@@ -538,9 +538,23 @@ class VoiceAgent:
                 content = response.content.strip() if response.content else ""
 
                 if content:
+                    import re
+
+                    # Check for *express_emotion* pattern (LLM misbehavior)
+                    emotion_pattern = r'\*express_emotion\*\s*\{["\']?emotion["\']?\s*:\s*["\']?(\w+)["\']?\}'
+                    emotion_match = re.search(emotion_pattern, content)
+                    if emotion_match:
+                        emotion = emotion_match.group(1).lower()
+                        valid_emotions = ["neutral", "happy", "warm", "concerned", "curious", "encouraging", "celebrating"]
+                        if emotion in valid_emotions:
+                            logger.info(f"Detected *express_emotion* in text, extracting emotion: {emotion}")
+                            yield f"__EMOTION:{emotion}__"
+                        content = re.sub(emotion_pattern, '', content).strip()
+                        if not content:
+                            continue
+
                     # Check if LLM output raw JSON tool call (model misbehavior)
                     # Pattern: {"farewell_message":"..."} or {"title":"...", "content":"..."}
-                    import re
                     json_match = re.search(r'\{["\'](?:farewell_message|title)["\']:', content)
                     if json_match:
                         # Extract JSON and remaining text

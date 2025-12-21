@@ -5,6 +5,7 @@ import SwiftUI
 class VoiceChatViewModel: ObservableObject {
     @Published var state: VoiceChatState = .disconnected
     @Published var emotion: AvatarEmotion = .neutral
+    @Published var isAudioPlaying: Bool = false
     @Published var userTranscript: String = ""
     @Published var assistantText: String = ""
     @Published var conversationHistory: [(role: String, text: String)] = []
@@ -19,7 +20,7 @@ class VoiceChatViewModel: ObservableObject {
     }
 
     var canRecord: Bool {
-        state == .idle || state == .speaking
+        state == .idle || state == .speaking || state == .thinking
     }
 
     init() {
@@ -109,6 +110,12 @@ extension VoiceChatViewModel: VoiceChatServiceDelegate {
     nonisolated func voiceChatDidError(_ message: String) {
         Task { @MainActor in
             self.error = message
+        }
+    }
+
+    nonisolated func voiceChatDidUpdateAudioPlaying(_ isPlaying: Bool) {
+        Task { @MainActor in
+            self.isAudioPlaying = isPlaying
         }
     }
 }

@@ -7,6 +7,7 @@ protocol VoiceChatServiceDelegate: AnyObject {
     func voiceChatDidReceiveEmotion(_ emotion: AvatarEmotion)
     func voiceChatDidEnd(entryId: UUID?)
     func voiceChatDidError(_ message: String)
+    func voiceChatDidUpdateAudioPlaying(_ isPlaying: Bool)
 }
 
 class VoiceChatService: NSObject {
@@ -23,7 +24,16 @@ class VoiceChatService: NSObject {
         }
     }
 
+    private(set) var isAudioPlaying: Bool = false {
+        didSet {
+            if oldValue != isAudioPlaying {
+                delegate?.voiceChatDidUpdateAudioPlaying(isAudioPlaying)
+            }
+        }
+    }
+
     private var pingTimer: Timer?
+    private var thinkingTimeoutTimer: Timer?
     private var token: String?
     private var createdEntryId: UUID?
 
@@ -45,31 +55,71 @@ class VoiceChatService: NSObject {
         webSocketManager.disconnect()
         pingTimer?.invalidate()
         pingTimer = nil
+        thinkingTimeoutTimer?.invalidate()
+        thinkingTimeoutTimer = nil
+        isAudioPlaying = false
         state = .disconnected
     }
 
     func startRecording() {
-        guard state == .idle || state == .speaking else { return }
+        guard state == .idle || state == .speaking || state == .thinking else {
+            print("[VoiceChat] Cannot start recording in state: \(state)")
+            return
+        }
+
+        guard webSocketManager.isConnected else {
+            print("[VoiceChat] WebSocket not connected, cannot record")
+            delegate?.voiceChatDidError("Connection lost. Please try again.")
+            state = .disconnected
+            return
+        }
+
+        thinkingTimeoutTimer?.invalidate()
+        thinkingTimeoutTimer = nil
 
         if state == .speaking {
             webSocketManager.sendInterrupt()
             audioEngine.stopPlayback()
+            isAudioPlaying = false
+        }
+
+        if state == .thinking {
+            print("[VoiceChat] Resetting from thinking state to record again")
         }
 
         audioEngine.startRecording()
         state = .listening
+        print("[VoiceChat] Started recording, state is now: \(state)")
     }
 
     func stopRecording() {
         guard state == .listening else { return }
         audioEngine.stopRecording()
         state = .thinking
+        startThinkingTimeout()
+    }
+
+    private func startThinkingTimeout() {
+        thinkingTimeoutTimer?.invalidate()
+        thinkingTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            if self.state == .thinking {
+                print("[VoiceChat] Thinking timeout - returning to idle")
+                self.state = .idle
+            }
+        }
+    }
+
+    private func cancelThinkingTimeout() {
+        thinkingTimeoutTimer?.invalidate()
+        thinkingTimeoutTimer = nil
     }
 
     func interrupt() {
         if state == .speaking {
             webSocketManager.sendInterrupt()
             audioEngine.stopPlayback()
+            isAudioPlaying = false
             state = .idle
         }
     }
@@ -125,10 +175,14 @@ extension VoiceChatService: WebSocketManagerDelegate {
             state = .thinking
 
         case .assistantSpeaking:
+            cancelThinkingTimeout()
             state = .speaking
 
         case .assistantDone:
-            state = .idle
+            audioEngine.flushAudioBuffer()
+            if !audioEngine.isPlaying {
+                state = .idle
+            }
 
         case .toolCall:
             if let tool = message.data?.tool {
@@ -149,6 +203,7 @@ extension VoiceChatService: WebSocketManagerDelegate {
 
         case .interrupted:
             audioEngine.stopPlayback()
+            isAudioPlaying = false
             state = .idle
 
         case .conversationEnded:
@@ -166,6 +221,13 @@ extension VoiceChatService: WebSocketManagerDelegate {
     }
 
     func webSocketDidReceiveAudio(_ data: Data) {
+        cancelThinkingTimeout()
+
+        if state == .listening {
+            print("[VoiceChat] Received audio while listening - stopping recording first")
+            audioEngine.stopRecording()
+        }
+
         audioEngine.playAudio(data)
         if state != .speaking {
             state = .speaking
@@ -175,7 +237,28 @@ extension VoiceChatService: WebSocketManagerDelegate {
 
 extension VoiceChatService: AudioEngineDelegate {
     func audioEngineDidCaptureAudio(_ data: Data) {
-        print("[VoiceChat] Received \(data.count) bytes from audio engine, sending to WebSocket")
+        guard state == .listening else {
+            print("[VoiceChat] Ignoring audio capture - not in listening state (state: \(state))")
+            return
+        }
+        print("[VoiceChat] Sending \(data.count) bytes to WebSocket")
         webSocketManager.sendAudio(data)
+    }
+
+    func audioEngineDidStartPlaying() {
+        print("[VoiceChat] Audio playback started")
+        isAudioPlaying = true
+        cancelThinkingTimeout()
+        if state != .speaking {
+            state = .speaking
+        }
+    }
+
+    func audioEngineDidStopPlaying() {
+        print("[VoiceChat] Audio playback finished")
+        isAudioPlaying = false
+        if state == .speaking {
+            state = .idle
+        }
     }
 }

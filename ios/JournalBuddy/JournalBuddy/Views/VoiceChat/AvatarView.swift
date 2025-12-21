@@ -3,15 +3,14 @@ import SwiftUI
 struct AvatarView: View {
     let state: VoiceChatState
     let emotion: AvatarEmotion
+    var isAudioPlaying: Bool = false
 
     @State private var pulseScale: CGFloat = 1.0
     @State private var glowOpacity: Double = 0.3
     @State private var thinkingDotIndex: Int = 0
-    @State private var speakingImageIndex: Int = 0
     @State private var listenPingScale: CGFloat = 1.0
 
     let thinkingTimer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
-    let speakingTimer = Timer.publish(every: 0.3, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -30,9 +29,11 @@ struct AvatarView: View {
                 thinkingDotIndex = (thinkingDotIndex + 1) % 3
             }
         }
-        .onReceive(speakingTimer) { _ in
-            if state == .speaking {
-                speakingImageIndex = speakingImageIndex == 0 ? 1 : 0
+        .onChange(of: isAudioPlaying) { _, playing in
+            if playing {
+                updateAnimation(for: .speaking)
+            } else if state == .speaking {
+                startBreathingAnimation()
             }
         }
     }
@@ -50,7 +51,7 @@ struct AvatarView: View {
                 listeningPingEffect
             }
 
-            if state == .speaking {
+            if isAudioPlaying {
                 speakingPulseEffect
             }
 
@@ -123,20 +124,20 @@ struct AvatarView: View {
     }
 
     private var currentImageName: String {
-        if state == .speaking {
-            return speakingImageIndex == 0 ? "BuddySpeaking1" : "BuddySpeaking2"
+        if isAudioPlaying {
+            return "BuddySpeaking1"
         }
 
         switch emotion {
         case .neutral:
             return "BuddyNeutral"
-        case .happy:
+        case .happy, .celebrating:
             return "BuddyHappy"
         case .concerned:
             return "BuddyConcerned"
         case .curious:
             return "BuddyThinking"
-        case .encouraging:
+        case .encouraging, .warm:
             return "BuddyEncouraging"
         }
     }
@@ -274,9 +275,9 @@ struct AudioWaveformView: View {
 
 #Preview {
     VStack(spacing: 40) {
-        AvatarView(state: .idle, emotion: .neutral)
-        AvatarView(state: .listening, emotion: .curious)
-        AvatarView(state: .speaking, emotion: .happy)
+        AvatarView(state: .idle, emotion: .neutral, isAudioPlaying: false)
+        AvatarView(state: .listening, emotion: .curious, isAudioPlaying: false)
+        AvatarView(state: .speaking, emotion: .happy, isAudioPlaying: true)
     }
     .padding()
     .background(Color.black.opacity(0.9))

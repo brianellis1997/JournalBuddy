@@ -50,14 +50,16 @@ struct VoiceSendMessage: Codable {
 enum AvatarEmotion: String, CaseIterable {
     case neutral
     case happy
+    case warm
     case concerned
     case curious
     case encouraging
+    case celebrating
 
     var eyebrowStyle: String {
         switch self {
         case .neutral: return "normal"
-        case .happy, .encouraging: return "raised"
+        case .happy, .encouraging, .warm, .celebrating: return "raised"
         case .concerned: return "furrowed"
         case .curious: return "one-raised"
         }
@@ -66,9 +68,9 @@ enum AvatarEmotion: String, CaseIterable {
     var mouthStyle: String {
         switch self {
         case .neutral, .curious: return "neutral"
-        case .happy: return "smile"
+        case .happy, .celebrating: return "smile"
         case .concerned: return "slight-frown"
-        case .encouraging: return "warm-smile"
+        case .encouraging, .warm: return "warm-smile"
         }
     }
 }

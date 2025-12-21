@@ -12,7 +12,7 @@ class WebSocketManager: NSObject {
 
     private var webSocket: URLSessionWebSocketTask?
     private var session: URLSession!
-    private var isConnected = false
+    private(set) var isConnected = false
 
     override init() {
         super.init()

@@ -118,13 +118,13 @@ struct VoiceChatView: View {
 
     private var avatarSection: some View {
         VStack(spacing: 20) {
-            AvatarView(state: viewModel.state, emotion: viewModel.emotion)
+            AvatarView(state: viewModel.state, emotion: viewModel.emotion, isAudioPlaying: viewModel.isAudioPlaying)
 
             if viewModel.state == .listening {
                 AudioWaveformView(isActive: true, color: .green)
                     .frame(height: 30)
             } else if viewModel.state == .speaking {
-                AudioWaveformView(isActive: true, color: .journalSecondary)
+                AudioWaveformView(isActive: viewModel.isAudioPlaying, color: .journalSecondary)
                     .frame(height: 30)
             } else {
                 Spacer()
