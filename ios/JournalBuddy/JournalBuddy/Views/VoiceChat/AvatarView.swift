@@ -228,20 +228,14 @@ struct AudioWaveformView: View {
     let isActive: Bool
     let color: Color
 
-    @State private var animationPhases: [CGFloat] = Array(repeating: 0.3, count: 5)
+    @State private var animationPhases: [CGFloat] = [0.3, 0.5, 0.7, 0.4, 0.6]
 
     var body: some View {
         HStack(spacing: 4) {
             ForEach(0..<5, id: \.self) { index in
                 RoundedRectangle(cornerRadius: 2)
                     .fill(color)
-                    .frame(width: 4, height: isActive ? animationPhases[index] * 30 : 8)
-                    .animation(
-                        .easeInOut(duration: 0.3)
-                        .repeatForever(autoreverses: true)
-                        .delay(Double(index) * 0.1),
-                        value: isActive
-                    )
+                    .frame(width: 4, height: max(8, min(30, barHeight(for: index))))
             }
         }
         .onAppear {
@@ -258,17 +252,25 @@ struct AudioWaveformView: View {
         }
     }
 
+    private func barHeight(for index: Int) -> CGFloat {
+        guard isActive, index < animationPhases.count else { return 8 }
+        let phase = animationPhases[index]
+        guard phase.isFinite else { return 8 }
+        return phase * 30
+    }
+
     private func startWaveAnimation() {
         for i in 0..<5 {
-            withAnimation(.easeInOut(duration: Double.random(in: 0.2...0.5)).repeatForever(autoreverses: true).delay(Double(i) * 0.1)) {
-                animationPhases[i] = CGFloat.random(in: 0.4...1.0)
+            let duration = 0.3 + Double(i) * 0.05
+            withAnimation(.easeInOut(duration: duration).repeatForever(autoreverses: true)) {
+                animationPhases[i] = CGFloat([0.5, 0.8, 1.0, 0.6, 0.9][i])
             }
         }
     }
 
     private func resetWaveAnimation() {
-        for i in 0..<5 {
-            animationPhases[i] = 0.3
+        withAnimation(.easeOut(duration: 0.2)) {
+            animationPhases = [0.3, 0.3, 0.3, 0.3, 0.3]
         }
     }
 }

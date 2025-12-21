@@ -120,12 +120,21 @@ struct VoiceChatView: View {
         VStack(spacing: 20) {
             AvatarView(state: viewModel.state, emotion: viewModel.emotion, isAudioPlaying: viewModel.isAudioPlaying)
 
-            if viewModel.state == .listening {
+            if viewModel.isListening {
                 AudioWaveformView(isActive: true, color: .green)
                     .frame(height: 30)
-            } else if viewModel.state == .speaking {
-                AudioWaveformView(isActive: viewModel.isAudioPlaying, color: .journalSecondary)
+            } else if viewModel.state == .speaking && viewModel.isAudioPlaying {
+                AudioWaveformView(isActive: true, color: .journalSecondary)
                     .frame(height: 30)
+            } else if viewModel.isMuted {
+                HStack(spacing: 8) {
+                    Image(systemName: "mic.slash.fill")
+                        .foregroundColor(.red.opacity(0.7))
+                    Text("Muted")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                .frame(height: 30)
             } else {
                 Spacer()
                     .frame(height: 30)
@@ -169,7 +178,7 @@ struct VoiceChatView: View {
 
     private var controlsSection: some View {
         VStack(spacing: 16) {
-            if viewModel.state == .speaking {
+            if viewModel.state == .speaking && viewModel.isAudioPlaying {
                 Button {
                     viewModel.interrupt()
                 } label: {
@@ -186,61 +195,49 @@ struct VoiceChatView: View {
                 }
             }
 
-            recordButton
+            muteButton
                 .padding(.bottom, 40)
         }
     }
 
-    private var recordButton: some View {
+    private var muteButton: some View {
         Button {
-            viewModel.toggleRecording()
+            viewModel.toggleMute()
         } label: {
             ZStack {
                 Circle()
-                    .fill(recordButtonColor)
+                    .fill(muteButtonColor)
                     .frame(width: 80, height: 80)
-                    .shadow(color: recordButtonColor.opacity(0.5), radius: 10)
+                    .shadow(color: muteButtonColor.opacity(0.5), radius: 10)
 
                 if viewModel.state == .connecting {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .scaleEffect(1.5)
                 } else {
-                    Image(systemName: recordButtonIcon)
+                    Image(systemName: muteButtonIcon)
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.white)
                 }
             }
         }
-        .disabled(!viewModel.canRecord && viewModel.state != .listening)
-        .scaleEffect(viewModel.isRecording ? 1.1 : 1.0)
-        .animation(.easeInOut(duration: 0.2), value: viewModel.isRecording)
+        .disabled(viewModel.state == .connecting || viewModel.state == .disconnected)
+        .scaleEffect(viewModel.isListening ? 1.1 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isListening)
     }
 
-    private var recordButtonColor: Color {
-        switch viewModel.state {
-        case .listening:
-            return .red
-        case .connecting:
+    private var muteButtonColor: Color {
+        if viewModel.state == .connecting || viewModel.state == .disconnected {
             return .gray
-        case .disconnected:
-            return .gray
-        default:
-            return .green
         }
+        return viewModel.isMuted ? .red : .green
     }
 
-    private var recordButtonIcon: String {
-        switch viewModel.state {
-        case .listening:
-            return "stop.fill"
-        case .thinking:
-            return "ellipsis"
-        case .speaking:
-            return "mic.fill"
-        default:
+    private var muteButtonIcon: String {
+        if viewModel.state == .connecting {
             return "mic.fill"
         }
+        return viewModel.isMuted ? "mic.slash.fill" : "mic.fill"
     }
 }
 

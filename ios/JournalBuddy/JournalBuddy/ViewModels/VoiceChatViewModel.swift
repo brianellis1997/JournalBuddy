@@ -6,6 +6,7 @@ class VoiceChatViewModel: ObservableObject {
     @Published var state: VoiceChatState = .disconnected
     @Published var emotion: AvatarEmotion = .neutral
     @Published var isAudioPlaying: Bool = false
+    @Published var isMuted: Bool = false
     @Published var userTranscript: String = ""
     @Published var assistantText: String = ""
     @Published var conversationHistory: [(role: String, text: String)] = []
@@ -15,12 +16,8 @@ class VoiceChatViewModel: ObservableObject {
 
     private let voiceChatService = VoiceChatService()
 
-    var isRecording: Bool {
-        state == .listening
-    }
-
-    var canRecord: Bool {
-        state == .idle || state == .speaking || state == .thinking
+    var isListening: Bool {
+        state == .listening && !isMuted
     }
 
     init() {
@@ -42,17 +39,17 @@ class VoiceChatViewModel: ObservableObject {
         state = .disconnected
     }
 
-    func toggleRecording() {
-        if state == .listening {
-            voiceChatService.stopRecording()
-        } else if canRecord {
-            userTranscript = ""
-            voiceChatService.startRecording()
-        }
+    func toggleMute() {
+        voiceChatService.toggleMute()
     }
 
     func interrupt() {
         voiceChatService.interrupt()
+    }
+
+    func clearTranscripts() {
+        userTranscript = ""
+        assistantText = ""
     }
 
     func clearError() {
@@ -80,14 +77,13 @@ extension VoiceChatViewModel: VoiceChatServiceDelegate {
 
     nonisolated func voiceChatDidReceiveAssistantText(_ text: String) {
         Task { @MainActor in
-            self.assistantText = text
-            if !text.isEmpty {
-                if let lastIndex = self.conversationHistory.lastIndex(where: { $0.role == "assistant" }),
-                   lastIndex == self.conversationHistory.count - 1 {
-                    self.conversationHistory[lastIndex] = (role: "assistant", text: text)
-                } else {
-                    self.conversationHistory.append((role: "assistant", text: text))
-                }
+            guard !text.isEmpty else { return }
+            self.assistantText += text
+            if let lastIndex = self.conversationHistory.lastIndex(where: { $0.role == "assistant" }),
+               lastIndex == self.conversationHistory.count - 1 {
+                self.conversationHistory[lastIndex] = (role: "assistant", text: self.assistantText)
+            } else {
+                self.conversationHistory.append((role: "assistant", text: self.assistantText))
             }
         }
     }
@@ -116,6 +112,12 @@ extension VoiceChatViewModel: VoiceChatServiceDelegate {
     nonisolated func voiceChatDidUpdateAudioPlaying(_ isPlaying: Bool) {
         Task { @MainActor in
             self.isAudioPlaying = isPlaying
+        }
+    }
+
+    nonisolated func voiceChatDidUpdateMuted(_ isMuted: Bool) {
+        Task { @MainActor in
+            self.isMuted = isMuted
         }
     }
 }

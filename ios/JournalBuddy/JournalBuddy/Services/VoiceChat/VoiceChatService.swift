@@ -8,6 +8,7 @@ protocol VoiceChatServiceDelegate: AnyObject {
     func voiceChatDidEnd(entryId: UUID?)
     func voiceChatDidError(_ message: String)
     func voiceChatDidUpdateAudioPlaying(_ isPlaying: Bool)
+    func voiceChatDidUpdateMuted(_ isMuted: Bool)
 }
 
 class VoiceChatService: NSObject {
@@ -31,6 +32,8 @@ class VoiceChatService: NSObject {
             }
         }
     }
+
+    private(set) var isMuted: Bool = false
 
     private var pingTimer: Timer?
     private var thinkingTimeoutTimer: Timer?
@@ -58,6 +61,7 @@ class VoiceChatService: NSObject {
         thinkingTimeoutTimer?.invalidate()
         thinkingTimeoutTimer = nil
         isAudioPlaying = false
+        isMuted = false
         state = .disconnected
     }
 
@@ -120,8 +124,50 @@ class VoiceChatService: NSObject {
             webSocketManager.sendInterrupt()
             audioEngine.stopPlayback()
             isAudioPlaying = false
-            state = .idle
+            state = .listening
         }
+    }
+
+    func toggleMute() {
+        isMuted = !isMuted
+        delegate?.voiceChatDidUpdateMuted(isMuted)
+
+        if isMuted {
+            audioEngine.stopRecording()
+            if state == .listening {
+                state = .idle
+            }
+        } else {
+            startContinuousListening()
+        }
+    }
+
+    private func startContinuousListening() {
+        print("[VoiceChat] startContinuousListening called, state: \(state), connected: \(webSocketManager.isConnected), muted: \(isMuted)")
+
+        guard webSocketManager.isConnected else {
+            print("[VoiceChat] Cannot start listening - not connected")
+            return
+        }
+
+        guard !isMuted else {
+            print("[VoiceChat] Cannot start listening - muted")
+            return
+        }
+
+        guard state != .speaking else {
+            print("[VoiceChat] Cannot start listening - currently speaking")
+            return
+        }
+
+        guard state != .disconnected else {
+            print("[VoiceChat] Cannot start listening - disconnected")
+            return
+        }
+
+        audioEngine.startRecording()
+        state = .listening
+        print("[VoiceChat] Continuous listening started")
     }
 
     private func startPingTimer() {
@@ -137,6 +183,10 @@ extension VoiceChatService: WebSocketManagerDelegate {
         print("[VoiceChat] WebSocket connected")
         state = .idle
         startPingTimer()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.startContinuousListening()
+        }
     }
 
     func webSocketDidDisconnect(error: Error?) {
@@ -180,9 +230,6 @@ extension VoiceChatService: WebSocketManagerDelegate {
 
         case .assistantDone:
             audioEngine.flushAudioBuffer()
-            if !audioEngine.isPlaying {
-                state = .idle
-            }
 
         case .toolCall:
             if let tool = message.data?.tool {
@@ -237,11 +284,9 @@ extension VoiceChatService: WebSocketManagerDelegate {
 
 extension VoiceChatService: AudioEngineDelegate {
     func audioEngineDidCaptureAudio(_ data: Data) {
-        guard state == .listening else {
-            print("[VoiceChat] Ignoring audio capture - not in listening state (state: \(state))")
+        guard state == .listening && !isMuted else {
             return
         }
-        print("[VoiceChat] Sending \(data.count) bytes to WebSocket")
         webSocketManager.sendAudio(data)
     }
 
@@ -259,6 +304,9 @@ extension VoiceChatService: AudioEngineDelegate {
         isAudioPlaying = false
         if state == .speaking {
             state = .idle
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.startContinuousListening()
         }
     }
 }

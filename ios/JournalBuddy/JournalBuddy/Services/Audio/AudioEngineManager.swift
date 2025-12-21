@@ -49,7 +49,7 @@ class AudioEngineManager {
             stopRecording()
         }
 
-        stopPlayback()
+        stopPlayback(notifyDelegate: false)
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -262,7 +262,7 @@ class AudioEngineManager {
         bufferLock.unlock()
 
         if completed >= scheduled {
-            bufferQueue.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            bufferQueue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 guard let self = self else { return }
 
                 self.bufferLock.lock()
@@ -311,7 +311,7 @@ class AudioEngineManager {
         }
     }
 
-    func stopPlayback() {
+    func stopPlayback(notifyDelegate: Bool = true) {
         let wasPlaying = isPlaying
 
         playerNode?.stop()
@@ -330,7 +330,7 @@ class AudioEngineManager {
         playbackEngine = nil
         playerNode = nil
 
-        if wasPlaying {
+        if wasPlaying && notifyDelegate {
             delegate?.audioEngineDidStopPlaying()
         }
         print("[Audio] Playback stopped")

@@ -107,7 +107,7 @@ class WebSocketManager: NSObject {
             let message = try JSONDecoder().decode(VoiceControlMessage.self, from: data)
             print("[WebSocket] Received: \(message.type)")
 
-            if message.type == .connected || message.type == .ready {
+            if message.type == .ready && !isConnected {
                 isConnected = true
                 delegate?.webSocketDidConnect()
             }
