@@ -12,7 +12,9 @@ class GoalsViewModel: ObservableObject {
 
         do {
             goals = try await APIClient.shared.getGoals(status: status)
+            print("[GoalsVM] Loaded \(goals.count) goals")
         } catch {
+            print("[GoalsVM] Failed to load goals: \(error)")
             self.error = error.localizedDescription
         }
 

@@ -27,6 +27,9 @@ class DeepgramStreamManager:
             params = (
                 "?model=nova-2"
                 "&language=en-US"
+                "&encoding=linear16"
+                "&sample_rate=48000"
+                "&channels=1"
                 "&smart_format=true"
                 "&interim_results=true"
                 "&utterance_end_ms=1000"

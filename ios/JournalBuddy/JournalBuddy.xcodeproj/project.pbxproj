@@ -24,10 +24,14 @@
 		A1000023233F0023 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000023233F0023 /* KeychainManager.swift */; };
 		A1000030233F0030 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000030233F0030 /* APIClient.swift */; };
 		A1000031233F0031 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000031233F0031 /* APIError.swift */; };
+		A1000032233F0032 /* WebSocketManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000032233F0032 /* WebSocketManager.swift */; };
+		A1000033233F0033 /* AudioEngineManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000033233F0033 /* AudioEngineManager.swift */; };
+		A1000034233F0034 /* VoiceChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000034233F0034 /* VoiceChatService.swift */; };
 		A1000040233F0040 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000040233F0040 /* AuthViewModel.swift */; };
 		A1000041233F0041 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000041233F0041 /* HomeViewModel.swift */; };
 		A1000042233F0042 /* JournalListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000042233F0042 /* JournalListViewModel.swift */; };
 		A1000043233F0043 /* GoalsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000043233F0043 /* GoalsViewModel.swift */; };
+		A1000044233F0044 /* VoiceChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000044233F0044 /* VoiceChatViewModel.swift */; };
 		A1000050233F0050 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000050233F0050 /* LoginView.swift */; };
 		A1000051233F0051 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000051233F0051 /* SignupView.swift */; };
 		A1000052233F0052 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000052233F0052 /* HomeView.swift */; };
@@ -37,6 +41,8 @@
 		A1000056233F0056 /* GoalsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000056233F0056 /* GoalsListView.swift */; };
 		A1000057233F0057 /* GoalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000057233F0057 /* GoalDetailView.swift */; };
 		A1000058233F0058 /* GoalEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000058233F0058 /* GoalEditorView.swift */; };
+		A1000059233F0059 /* VoiceChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000059233F0059 /* VoiceChatView.swift */; };
+		A1000060233F0060 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000060233F0060 /* AvatarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,10 +63,14 @@
 		A2000023233F0023 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		A2000030233F0030 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		A2000031233F0031 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		A2000032233F0032 /* WebSocketManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketManager.swift; sourceTree = "<group>"; };
+		A2000033233F0033 /* AudioEngineManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngineManager.swift; sourceTree = "<group>"; };
+		A2000034233F0034 /* VoiceChatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceChatService.swift; sourceTree = "<group>"; };
 		A2000040233F0040 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		A2000041233F0041 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		A2000042233F0042 /* JournalListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalListViewModel.swift; sourceTree = "<group>"; };
 		A2000043233F0043 /* GoalsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsViewModel.swift; sourceTree = "<group>"; };
+		A2000044233F0044 /* VoiceChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceChatViewModel.swift; sourceTree = "<group>"; };
 		A2000050233F0050 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		A2000051233F0051 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
 		A2000052233F0052 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -70,6 +80,8 @@
 		A2000056233F0056 /* GoalsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsListView.swift; sourceTree = "<group>"; };
 		A2000057233F0057 /* GoalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailView.swift; sourceTree = "<group>"; };
 		A2000058233F0058 /* GoalEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalEditorView.swift; sourceTree = "<group>"; };
+		A2000059233F0059 /* VoiceChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceChatView.swift; sourceTree = "<group>"; };
+		A2000060233F0060 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		A3000000233F0000 /* JournalBuddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JournalBuddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -185,6 +197,8 @@
 			isa = PBXGroup;
 			children = (
 				A5000041233F0041 /* Networking */,
+				A5000042233F0042 /* Audio */,
+				A5000043233F0043 /* VoiceChat */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -194,8 +208,25 @@
 			children = (
 				A2000030233F0030 /* APIClient.swift */,
 				A2000031233F0031 /* APIError.swift */,
+				A2000032233F0032 /* WebSocketManager.swift */,
 			);
 			path = Networking;
+			sourceTree = "<group>";
+		};
+		A5000042233F0042 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				A2000033233F0033 /* AudioEngineManager.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		A5000043233F0043 /* VoiceChat */ = {
+			isa = PBXGroup;
+			children = (
+				A2000034233F0034 /* VoiceChatService.swift */,
+			);
+			path = VoiceChat;
 			sourceTree = "<group>";
 		};
 		A5000050233F0050 /* ViewModels */ = {
@@ -205,6 +236,7 @@
 				A2000041233F0041 /* HomeViewModel.swift */,
 				A2000042233F0042 /* JournalListViewModel.swift */,
 				A2000043233F0043 /* GoalsViewModel.swift */,
+				A2000044233F0044 /* VoiceChatViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -216,8 +248,18 @@
 				A5000062233F0062 /* Home */,
 				A5000063233F0063 /* Journal */,
 				A5000064233F0064 /* Goals */,
+				A5000065233F0065 /* VoiceChat */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		A5000065233F0065 /* VoiceChat */ = {
+			isa = PBXGroup;
+			children = (
+				A2000059233F0059 /* VoiceChatView.swift */,
+				A2000060233F0060 /* AvatarView.swift */,
+			);
+			path = VoiceChat;
 			sourceTree = "<group>";
 		};
 		A5000061233F0061 /* Onboarding */ = {
@@ -342,10 +384,14 @@
 				A1000023233F0023 /* KeychainManager.swift in Sources */,
 				A1000030233F0030 /* APIClient.swift in Sources */,
 				A1000031233F0031 /* APIError.swift in Sources */,
+				A1000032233F0032 /* WebSocketManager.swift in Sources */,
+				A1000033233F0033 /* AudioEngineManager.swift in Sources */,
+				A1000034233F0034 /* VoiceChatService.swift in Sources */,
 				A1000040233F0040 /* AuthViewModel.swift in Sources */,
 				A1000041233F0041 /* HomeViewModel.swift in Sources */,
 				A1000042233F0042 /* JournalListViewModel.swift in Sources */,
 				A1000043233F0043 /* GoalsViewModel.swift in Sources */,
+				A1000044233F0044 /* VoiceChatViewModel.swift in Sources */,
 				A1000050233F0050 /* LoginView.swift in Sources */,
 				A1000051233F0051 /* SignupView.swift in Sources */,
 				A1000052233F0052 /* HomeView.swift in Sources */,
@@ -355,6 +401,8 @@
 				A1000056233F0056 /* GoalsListView.swift in Sources */,
 				A1000057233F0057 /* GoalDetailView.swift in Sources */,
 				A1000058233F0058 /* GoalEditorView.swift in Sources */,
+				A1000059233F0059 /* VoiceChatView.swift in Sources */,
+				A1000060233F0060 /* AvatarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,6 +539,7 @@
 				DEVELOPMENT_TEAM = PB569DUJ73;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JournalBuddy/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "JournalBuddy needs microphone access for voice journaling";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -521,6 +570,7 @@
 				DEVELOPMENT_TEAM = PB569DUJ73;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JournalBuddy/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "JournalBuddy needs microphone access for voice journaling";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

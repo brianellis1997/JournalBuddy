@@ -88,11 +88,21 @@ extension JSONDecoder {
             let container = try decoder.singleValueContainer()
             let dateString = try container.decode(String.self)
 
+            // Try ISO8601 with fractional seconds
             if let date = Date.iso8601Formatter.date(from: dateString) {
                 return date
             }
 
+            // Try ISO8601 without fractional seconds
             if let date = Date.iso8601FormatterWithoutFractionalSeconds.date(from: dateString) {
+                return date
+            }
+
+            // Try date-only format (YYYY-MM-DD)
+            let dateOnlyFormatter = DateFormatter()
+            dateOnlyFormatter.dateFormat = "yyyy-MM-dd"
+            dateOnlyFormatter.timeZone = TimeZone(identifier: "UTC")
+            if let date = dateOnlyFormatter.date(from: dateString) {
                 return date
             }
 

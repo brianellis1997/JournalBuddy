@@ -3,22 +3,29 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject private var viewModel = HomeViewModel()
+    @State private var showVoiceChat = false
+    @State private var voiceChatJournalType: String? = nil
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    greetingSection
+            ZStack {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        greetingSection
 
-                    if viewModel.scheduleStatus != nil {
-                        scheduleSection
+                        if viewModel.scheduleStatus != nil {
+                            scheduleSection
+                        }
+
+                        statsSection
+
+                        recentEntriesSection
                     }
-
-                    statsSection
-
-                    recentEntriesSection
+                    .padding()
+                    .padding(.bottom, 80)
                 }
-                .padding()
+
+                voiceChatFAB
             }
             .navigationTitle("Home")
             .refreshable {
@@ -26,6 +33,41 @@ struct HomeView: View {
             }
             .task {
                 await viewModel.loadData()
+            }
+            .fullScreenCover(isPresented: $showVoiceChat) {
+                VoiceChatView(journalType: voiceChatJournalType)
+            }
+        }
+    }
+
+    private var voiceChatFAB: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button {
+                    voiceChatJournalType = nil
+                    showVoiceChat = true
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.journalPrimary, .journalSecondary],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 60, height: 60)
+                            .shadow(color: .journalPrimary.opacity(0.4), radius: 10, x: 0, y: 4)
+
+                        Image(systemName: "mic.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
             }
         }
     }
@@ -62,14 +104,20 @@ struct HomeView: View {
                     SchedulePromptCard(
                         type: .morning,
                         prompt: status.morningPrompt ?? "Start your day with reflection"
-                    )
+                    ) {
+                        voiceChatJournalType = "morning"
+                        showVoiceChat = true
+                    }
                 }
 
                 if status.shouldShowEvening && !status.eveningCompleted {
                     SchedulePromptCard(
                         type: .evening,
                         prompt: status.eveningPrompt ?? "Reflect on your day"
-                    )
+                    ) {
+                        voiceChatJournalType = "evening"
+                        showVoiceChat = true
+                    }
                 }
 
                 if status.morningCompleted && status.shouldShowMorning {
@@ -176,6 +224,7 @@ struct HomeView: View {
 struct SchedulePromptCard: View {
     let type: JournalType
     let prompt: String
+    let onStart: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -193,23 +242,24 @@ struct SchedulePromptCard: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
-            NavigationLink {
-                Text("Entry Editor Coming Soon")
-            } label: {
-                Text("Start Journaling")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        LinearGradient(
-                            colors: [.journalPrimary, .journalSecondary],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+            Button(action: onStart) {
+                HStack {
+                    Image(systemName: "mic.fill")
+                    Text("Start Voice Journal")
+                }
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    LinearGradient(
+                        colors: [.journalPrimary, .journalSecondary],
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
-                    .cornerRadius(10)
+                )
+                .cornerRadius(10)
             }
         }
         .padding()

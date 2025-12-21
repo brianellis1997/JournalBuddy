@@ -8,7 +8,25 @@ struct GoalsListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.goals.isEmpty && !viewModel.isLoading {
+                if viewModel.isLoading && viewModel.goals.isEmpty {
+                    ProgressView("Loading goals...")
+                } else if let error = viewModel.error {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundColor(.orange)
+                        Text("Error loading goals")
+                            .font(.headline)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Retry") {
+                            Task { await viewModel.loadGoals() }
+                        }
+                    }
+                    .padding()
+                } else if viewModel.goals.isEmpty {
                     emptyState
                 } else {
                     goalsList

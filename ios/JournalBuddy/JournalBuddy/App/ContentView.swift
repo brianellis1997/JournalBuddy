@@ -32,7 +32,7 @@ struct MainTabView: View {
                 }
                 .tag(1)
 
-            VoiceChatPlaceholderView()
+            VoiceChatTabView()
                 .tabItem {
                     Label("Talk", systemImage: "waveform.circle.fill")
                 }
@@ -54,26 +54,127 @@ struct MainTabView: View {
     }
 }
 
-struct VoiceChatPlaceholderView: View {
+struct VoiceChatTabView: View {
+    @State private var showVoiceChat = false
+    @State private var selectedJournalType: String? = nil
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                Image(systemName: "waveform.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.linearGradient(
-                        colors: [.journalPrimary, .journalSecondary],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.95, green: 0.95, blue: 0.98),
+                        Color(red: 0.9, green: 0.92, blue: 0.98)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
 
-                Text("Voice Chat")
-                    .font(.title)
-                    .fontWeight(.bold)
+                VStack(spacing: 32) {
+                    Spacer()
 
-                Text("Coming soon...")
-                    .foregroundColor(.secondary)
+                    Image("BuddyNeutral")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 150, height: 150)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.journalPrimary, .journalSecondary],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 4
+                                )
+                        )
+                        .shadow(color: .journalPrimary.opacity(0.3), radius: 20)
+
+                    VStack(spacing: 8) {
+                        Text("Talk with Buddy")
+                            .font(.title)
+                            .fontWeight(.bold)
+
+                        Text("Your AI journaling companion is ready to listen")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+
+                    VStack(spacing: 16) {
+                        Button {
+                            selectedJournalType = nil
+                            showVoiceChat = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "mic.fill")
+                                Text("Start Freeform Session")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                LinearGradient(
+                                    colors: [.journalPrimary, .journalSecondary],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(16)
+                        }
+
+                        HStack(spacing: 12) {
+                            Button {
+                                selectedJournalType = "morning"
+                                showVoiceChat = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "sunrise.fill")
+                                        .foregroundColor(.orange)
+                                    Text("Morning")
+                                }
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(12)
+                                .shadow(color: .black.opacity(0.05), radius: 5)
+                            }
+
+                            Button {
+                                selectedJournalType = "evening"
+                                showVoiceChat = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "moon.stars.fill")
+                                        .foregroundColor(.indigo)
+                                    Text("Evening")
+                                }
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(12)
+                                .shadow(color: .black.opacity(0.05), radius: 5)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+
+                    Spacer()
+                    Spacer()
+                }
             }
             .navigationTitle("Talk")
+            .fullScreenCover(isPresented: $showVoiceChat) {
+                VoiceChatView(journalType: selectedJournalType)
+            }
         }
     }
 }

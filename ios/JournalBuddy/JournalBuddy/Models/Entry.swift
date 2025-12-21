@@ -33,8 +33,8 @@ enum JournalType: String, Codable, CaseIterable {
 
     var icon: String {
         switch self {
-        case .morning: return "sun.rise"
-        case .evening: return "moon.stars"
+        case .morning: return "sunrise.fill"
+        case .evening: return "moon.stars.fill"
         case .freeform: return "pencil"
         }
     }

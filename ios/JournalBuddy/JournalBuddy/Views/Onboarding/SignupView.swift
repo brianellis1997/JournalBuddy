@@ -29,13 +29,23 @@ struct SignupView: View {
 
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "person.badge.plus")
-                .font(.system(size: 50))
-                .foregroundStyle(.linearGradient(
-                    colors: [.journalPrimary, .journalSecondary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
+            Image("BuddyHappy")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 100, height: 100)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.journalPrimary, .journalSecondary],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 3
+                        )
+                )
+                .shadow(color: .journalPrimary.opacity(0.3), radius: 10)
 
             Text("Join JournalBuddy")
                 .font(.title2)

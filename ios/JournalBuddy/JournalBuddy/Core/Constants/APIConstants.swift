@@ -2,8 +2,10 @@ import Foundation
 
 enum APIConstants {
     #if DEBUG
-    static let baseURL = URL(string: "http://localhost:8000/api/v1")!
-    static let wsBaseURL = URL(string: "ws://localhost:8000/api/v1")!
+    // Use your Mac's local IP for testing on physical device
+    // Update this IP if your network changes
+    static let baseURL = URL(string: "http://192.168.1.172:8000/api/v1")!
+    static let wsBaseURL = URL(string: "ws://192.168.1.172:8000/api/v1")!
     #else
     static let baseURL = URL(string: "https://api.journalbuddy.app/api/v1")!
     static let wsBaseURL = URL(string: "wss://api.journalbuddy.app/api/v1")!

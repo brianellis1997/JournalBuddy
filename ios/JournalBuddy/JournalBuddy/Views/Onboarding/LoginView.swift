@@ -31,13 +31,23 @@ struct LoginView: View {
 
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "book.closed.fill")
-                .font(.system(size: 60))
-                .foregroundStyle(.linearGradient(
-                    colors: [.journalPrimary, .journalSecondary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
+            Image("BuddyNeutral")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 120)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.journalPrimary, .journalSecondary],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 3
+                        )
+                )
+                .shadow(color: .journalPrimary.opacity(0.3), radius: 15)
 
             Text("JournalBuddy")
                 .font(.largeTitle)

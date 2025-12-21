@@ -153,7 +153,7 @@ actor APIClient {
     func getGoals(status: GoalStatus? = nil) async throws -> [Goal] {
         var queryItems: [URLQueryItem] = []
         if let status = status {
-            queryItems.append(URLQueryItem(name: "status", value: status.rawValue))
+            queryItems.append(URLQueryItem(name: "status_filter", value: status.rawValue))
         }
         return try await request(
             endpoint: APIConstants.Endpoints.goals,
