@@ -120,4 +120,10 @@ extension VoiceChatViewModel: VoiceChatServiceDelegate {
             self.isMuted = isMuted
         }
     }
+
+    nonisolated func voiceChatWillStartAssistantResponse() {
+        Task { @MainActor in
+            self.assistantText = ""
+        }
+    }
 }

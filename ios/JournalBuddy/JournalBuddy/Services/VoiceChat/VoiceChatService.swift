@@ -9,6 +9,7 @@ protocol VoiceChatServiceDelegate: AnyObject {
     func voiceChatDidError(_ message: String)
     func voiceChatDidUpdateAudioPlaying(_ isPlaying: Bool)
     func voiceChatDidUpdateMuted(_ isMuted: Bool)
+    func voiceChatWillStartAssistantResponse()
 }
 
 class VoiceChatService: NSObject {
@@ -222,6 +223,7 @@ extension VoiceChatService: WebSocketManagerDelegate {
             }
 
         case .assistantThinking:
+            delegate?.voiceChatWillStartAssistantResponse()
             state = .thinking
 
         case .assistantSpeaking:
