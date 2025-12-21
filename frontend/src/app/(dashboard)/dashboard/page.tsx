@@ -90,7 +90,7 @@ export default function DashboardPage() {
               currentXP={gamificationStats.total_xp}
               level={gamificationStats.level}
               xpForNextLevel={gamificationStats.xp_for_next_level}
-              xpForCurrentLevel={gamificationStats.xp_for_current_level}
+              xpProgressInLevel={gamificationStats.xp_progress_in_level}
             />
           </CardContent>
         </Card>

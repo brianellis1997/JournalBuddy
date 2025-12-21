@@ -66,7 +66,7 @@ export default function ProgressPage() {
                   currentXP={stats.total_xp}
                   level={stats.level}
                   xpForNextLevel={stats.xp_for_next_level}
-                  xpForCurrentLevel={stats.xp_for_current_level}
+                  xpProgressInLevel={stats.xp_progress_in_level}
                 />
               </div>
             </CardContent>

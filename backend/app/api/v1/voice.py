@@ -254,6 +254,14 @@ class VoiceChatSession:
 
         try:
             from app.models.chat import ChatSession
+            from app.models.entry import Entry
+            from app.services.embedding import embedding_service
+            from sqlalchemy import select
+
+            session = await self.db.get(ChatSession, self.db_session_id)
+            if session and session.entry_id:
+                logger.info(f"Entry already exists for session {self.db_session_id}, skipping auto-save")
+                return
 
             conversation_text = "\n".join(
                 f"{msg['role'].upper()}: {msg['content']}"
@@ -267,41 +275,82 @@ class VoiceChatSession:
                 api_key=settings.groq_api_key,
                 model=settings.groq_model,
                 temperature=0.3,
-                max_tokens=300,
+                max_tokens=500,
             )
 
-            prompt = f"""Analyze this voice conversation and provide a brief summary.
+            prompt = f"""Analyze this voice conversation and create a journal entry summary.
 
 Conversation:
 {conversation_text}
 
 Provide your response in this exact format:
-SUMMARY: [1-2 sentence summary of what was discussed]
-TOPICS: [comma-separated key topics, max 5]
-MOOD: [user's overall mood: positive, neutral, or negative]"""
+TITLE: [A meaningful 3-8 word title capturing what was discussed]
+CONTENT: [2-3 paragraphs flowing summary of what the user shared, written in third person as a journal entry]
+MOOD: [One of: great, good, okay, bad, terrible - based on user's overall sentiment]
+TOPICS: [comma-separated key topics, max 5]"""
 
             response = await llm.ainvoke(prompt)
             content = response.content
 
-            summary = ""
+            title = "Voice Conversation"
+            entry_content = ""
+            mood = "okay"
             topics = ""
-            mood = "neutral"
 
+            current_field = None
             for line in content.split("\n"):
-                if line.startswith("SUMMARY:"):
-                    summary = line.replace("SUMMARY:", "").strip()
-                elif line.startswith("TOPICS:"):
-                    topics = line.replace("TOPICS:", "").strip()
+                line = line.strip()
+                if line.startswith("TITLE:"):
+                    title = line.replace("TITLE:", "").strip()
+                    current_field = None
+                elif line.startswith("CONTENT:"):
+                    entry_content = line.replace("CONTENT:", "").strip()
+                    current_field = "content"
                 elif line.startswith("MOOD:"):
                     mood = line.replace("MOOD:", "").strip().lower()
+                    current_field = None
+                elif line.startswith("TOPICS:"):
+                    topics = line.replace("TOPICS:", "").strip()
+                    current_field = None
+                elif current_field == "content" and line:
+                    entry_content += " " + line
 
-            session = await self.db.get(ChatSession, self.db_session_id)
-            if session:
-                session.summary = summary or "Voice conversation"
-                session.key_topics = topics
-                session.goal_updates = mood
+            valid_moods = ["great", "good", "okay", "bad", "terrible"]
+            if mood not in valid_moods:
+                mood = "okay"
+
+            if entry_content:
+                transcript_lines = []
+                for msg in self.chat_history:
+                    role = "You" if msg["role"] == "user" else "JournalBuddy"
+                    transcript_lines.append(f"{role}: {msg['content']}")
+                transcript = "\n\n".join(transcript_lines)
+
+                entry = Entry(
+                    user_id=self.user_id,
+                    title=title,
+                    content=entry_content,
+                    transcript=transcript,
+                    mood=mood,
+                    journal_type=self.journal_type,
+                )
+                self.db.add(entry)
+                await self.db.flush()
+
+                if session:
+                    session.entry_id = entry.id
+                    session.summary = entry_content[:500]
+                    session.key_topics = topics
+
                 await self.db.commit()
-                logger.info(f"Auto-saved session summary for {self.db_session_id}")
+                logger.info(f"Auto-created journal entry {entry.id} for session {self.db_session_id}")
+
+                try:
+                    embedding = await embedding_service.generate_embedding(entry_content)
+                    entry.embedding = embedding
+                    await self.db.commit()
+                except Exception as emb_err:
+                    logger.error(f"Failed to generate embedding: {emb_err}")
 
         except Exception as e:
             logger.error(f"Failed to auto-save session summary: {e}")

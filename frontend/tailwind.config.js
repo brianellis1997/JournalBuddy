@@ -26,6 +26,7 @@ module.exports = {
         'listen': 'listen 1s ease-in-out infinite',
         'think': 'think 2s ease-in-out infinite',
         'speak': 'speak 0.5s ease-in-out infinite',
+        'speaking': 'speaking 0.15s ease-in-out infinite alternate',
         'sound-wave': 'soundWave 0.6s ease-in-out infinite alternate',
         'breathe': 'breathe 4s ease-in-out infinite',
         'blink': 'blink 4s ease-in-out infinite',
@@ -68,6 +69,10 @@ module.exports = {
         mouthSpeak: {
           '0%': { transform: 'scaleY(1)' },
           '100%': { transform: 'scaleY(1.3)' },
+        },
+        speaking: {
+          '0%': { transform: 'scale(1)' },
+          '100%': { transform: 'scale(1.02)' },
         },
       },
     },

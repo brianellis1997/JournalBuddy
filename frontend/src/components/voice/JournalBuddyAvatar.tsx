@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { VoiceChatState, AvatarEmotion } from '@/hooks/useVoiceChat';
@@ -23,24 +22,7 @@ const emotionToImage: Record<AvatarEmotion, string> = {
   celebrating: '/avatars/Happy.png',
 };
 
-const speakingImages = ['/avatars/Speaking_1.png', '/avatars/Speaking_2.png'];
-
 export function JournalBuddyAvatar({ state, emotion = 'neutral', isAudioPlaying = false, className, size = 'lg' }: JournalBuddyAvatarProps) {
-  const [speakingFrame, setSpeakingFrame] = useState(0);
-
-  useEffect(() => {
-    if (!isAudioPlaying) {
-      setSpeakingFrame(0);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setSpeakingFrame(prev => (prev + 1) % 2);
-    }, 150);
-
-    return () => clearInterval(interval);
-  }, [isAudioPlaying]);
-
   const sizeConfig = {
     sm: { container: 'w-16 h-16', image: 64 },
     md: { container: 'w-32 h-32', image: 128 },
@@ -57,14 +39,14 @@ export function JournalBuddyAvatar({ state, emotion = 'neutral', isAudioPlaying 
   };
 
   const imageSrc = isAudioPlaying
-    ? speakingImages[speakingFrame]
+    ? '/avatars/Speaking_1.png'
     : emotionToImage[emotion] || emotionToImage.neutral;
 
   return (
     <div className={cn('relative flex items-center justify-center', className)}>
       <div
         className={cn(
-          'relative rounded-full flex items-center justify-center transition-all duration-500 overflow-hidden',
+          'relative rounded-full flex items-center justify-center transition-all duration-500',
           sizeConfig[size].container,
           stateColors[state]
         )}
@@ -91,14 +73,16 @@ export function JournalBuddyAvatar({ state, emotion = 'neutral', isAudioPlaying 
         <div className={cn(
           'relative z-10 transition-all duration-300',
           state === 'connecting' && 'animate-pulse',
-          state === 'idle' && 'animate-float',
         )}>
           <Image
             src={imageSrc}
             alt="JournalBuddy"
             width={sizeConfig[size].image}
             height={sizeConfig[size].image}
-            className="object-contain drop-shadow-lg"
+            className={cn(
+              'object-contain drop-shadow-lg',
+              isAudioPlaying && 'animate-speaking'
+            )}
             priority
           />
         </div>

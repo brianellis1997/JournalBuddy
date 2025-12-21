@@ -148,6 +148,22 @@ class CartesiaStreamManager:
                 yield audio_chunk
 
     async def _synthesize_sentence(self, text: str, chunk_size: int) -> AsyncGenerator[bytes, None]:
+        # Skip empty or invalid text
+        if not text or len(text.strip()) == 0:
+            logger.warning("Skipping TTS for empty text")
+            return
+
+        # Skip JSON-like content that shouldn't be spoken
+        stripped = text.strip()
+        if stripped.startswith('{') and stripped.endswith('}'):
+            logger.warning(f"Skipping TTS for JSON-like content: {text[:50]}")
+            return
+
+        # Skip control messages
+        if stripped.startswith('__') and stripped.endswith('__'):
+            logger.warning(f"Skipping TTS for control message: {text[:50]}")
+            return
+
         logger.info(f"Synthesizing: {text[:50]}...")
 
         async with httpx.AsyncClient() as client:

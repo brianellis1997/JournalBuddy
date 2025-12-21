@@ -128,10 +128,13 @@ MOOD DETECTION (for journal entry):
 - "bad" - frustrated, disappointed, sad
 - "terrible" - really struggling, awful day
 
-WRAPPING UP:
-When they seem done (says "no", "nothing else", "that's it", etc.):
-1. Use create_journal_entry to save a flowing summary of what they shared
-2. Then use end_conversation with a warm, personalized goodbye
+WRAPPING UP - THIS IS CRITICAL:
+When they want to end the conversation (says "no", "nothing else", "that's it", "goodbye", "bye", "gotta go", "go away", "leave me alone", or similar):
+1. FIRST use create_journal_entry to save a summary of what they shared
+2. IMMEDIATELY use end_conversation with a brief, warm goodbye
+3. Do NOT ask more questions or continue talking after they signal they're done
+
+IMPORTANT: Always use the tools properly. Do not output JSON - use the actual tool functions.
 
 Remember: Be a genuine friend, not a therapist or assistant."""
 
@@ -169,10 +172,13 @@ MOOD DETECTION (for the journal entry):
 - "bad" - frustrated, disappointed, sad
 - "terrible" - really struggling
 
-WRAPPING UP:
-When they seem done (says "no", "nothing else", "that's it"):
-1. Use create_journal_entry with a meaningful title and flowing summary
-2. Use end_conversation with a warm, personalized goodbye
+WRAPPING UP - THIS IS CRITICAL:
+When they want to end (says "no", "nothing else", "that's it", "goodbye", "bye", "gotta go", "go away", or similar):
+1. FIRST use create_journal_entry with a meaningful title and flowing summary
+2. IMMEDIATELY use end_conversation with a brief, warm goodbye
+3. Do NOT ask more questions after they signal they're done
+
+IMPORTANT: Always use the tools properly. Do not output JSON - use the actual tool functions.
 
 Remember: Be a genuine friend having a real conversation."""
 
@@ -529,8 +535,63 @@ class VoiceAgent:
                 return
 
             if not response.tool_calls:
-                if response.content and response.content.strip():
-                    yield response.content
+                content = response.content.strip() if response.content else ""
+
+                if content:
+                    # Check if LLM output raw JSON tool call (model misbehavior)
+                    # Pattern: {"farewell_message":"..."} or {"title":"...", "content":"..."}
+                    import re
+                    json_match = re.search(r'\{["\'](?:farewell_message|title)["\']:', content)
+                    if json_match:
+                        # Extract JSON and remaining text
+                        json_start = json_match.start()
+                        try:
+                            # Try to find the end of the JSON object
+                            brace_count = 0
+                            json_end = json_start
+                            for i, char in enumerate(content[json_start:]):
+                                if char == '{':
+                                    brace_count += 1
+                                elif char == '}':
+                                    brace_count -= 1
+                                    if brace_count == 0:
+                                        json_end = json_start + i + 1
+                                        break
+
+                            json_str = content[json_start:json_end]
+                            json_data = json.loads(json_str)
+                            remaining_text = (content[:json_start] + content[json_end:]).strip()
+
+                            # Handle farewell JSON
+                            if "farewell_message" in json_data:
+                                farewell = json_data["farewell_message"]
+                                logger.info(f"Detected raw JSON farewell, extracting: {farewell}")
+                                yield farewell
+                                yield "\n__END_CONVERSATION__"
+                                return
+
+                            # Handle create_journal_entry JSON
+                            elif "title" in json_data and "content" in json_data:
+                                logger.info("Detected raw JSON journal entry, executing tool")
+                                yield "__TOOL_START:create_journal_entry__"
+                                await tool_handler.create_journal_entry(
+                                    json_data.get("title", "Voice Journal"),
+                                    json_data.get("content", ""),
+                                    json_data.get("mood", "okay")
+                                )
+                                yield "__TOOL_DONE:create_journal_entry__"
+                                # If there's remaining text after the JSON, yield it
+                                if remaining_text:
+                                    yield remaining_text
+                                else:
+                                    # Continue to next iteration to get farewell
+                                    continue
+                        except (json.JSONDecodeError, Exception) as e:
+                            logger.warning(f"Failed to parse JSON from LLM output: {e}")
+                            # Output the content as-is if parsing fails
+                            yield content
+                    else:
+                        yield content
                 else:
                     logger.warning(f"LLM returned empty response on iteration {iteration}, user_message was: {user_message[:50]}")
                     if iteration == 0:
