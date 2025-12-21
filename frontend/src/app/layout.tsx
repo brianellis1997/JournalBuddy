@@ -7,6 +7,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'JournalBuddy - AI-Powered Journaling',
   description: 'Your personal AI journaling companion',
+  icons: {
+    icon: '/avatars/JournalBuddy.png',
+    apple: '/avatars/JournalBuddy.png',
+  },
 };
 
 export default function RootLayout({

@@ -1,8 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { VoiceChatState, AvatarEmotion } from '@/hooks/useVoiceChat';
-import { AvatarSVG } from './AvatarSVG';
 
 interface JournalBuddyAvatarProps {
   state: VoiceChatState;
@@ -12,17 +13,38 @@ interface JournalBuddyAvatarProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function JournalBuddyAvatar({ state, emotion = 'neutral', isAudioPlaying = false, className, size = 'lg' }: JournalBuddyAvatarProps) {
-  const sizeClasses = {
-    sm: 'w-24 h-24',
-    md: 'w-40 h-40',
-    lg: 'w-64 h-64',
-  };
+const emotionToImage: Record<AvatarEmotion, string> = {
+  neutral: '/avatars/neutral.png',
+  happy: '/avatars/Happy.png',
+  warm: '/avatars/Encouraging.png',
+  concerned: '/avatars/Concerned.png',
+  curious: '/avatars/Thinking.png',
+  encouraging: '/avatars/Encouraging.png',
+  celebrating: '/avatars/Happy.png',
+};
 
-  const avatarSizes = {
-    sm: 80,
-    md: 120,
-    lg: 200,
+const speakingImages = ['/avatars/Speaking_1.png', '/avatars/Speaking_2.png'];
+
+export function JournalBuddyAvatar({ state, emotion = 'neutral', isAudioPlaying = false, className, size = 'lg' }: JournalBuddyAvatarProps) {
+  const [speakingFrame, setSpeakingFrame] = useState(0);
+
+  useEffect(() => {
+    if (!isAudioPlaying) {
+      setSpeakingFrame(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setSpeakingFrame(prev => (prev + 1) % 2);
+    }, 150);
+
+    return () => clearInterval(interval);
+  }, [isAudioPlaying]);
+
+  const sizeConfig = {
+    sm: { container: 'w-16 h-16', image: 64 },
+    md: { container: 'w-32 h-32', image: 128 },
+    lg: { container: 'w-48 h-48', image: 192 },
   };
 
   const stateColors = {
@@ -34,51 +56,50 @@ export function JournalBuddyAvatar({ state, emotion = 'neutral', isAudioPlaying 
     speaking: 'bg-gradient-to-br from-purple-50 to-pink-50',
   };
 
-  const stateAnimations = {
-    disconnected: '',
-    connecting: 'animate-pulse',
-    idle: 'animate-float',
-    listening: 'animate-listen',
-    thinking: 'animate-think',
-    speaking: 'animate-speak',
-  };
+  const imageSrc = isAudioPlaying
+    ? speakingImages[speakingFrame]
+    : emotionToImage[emotion] || emotionToImage.neutral;
 
   return (
     <div className={cn('relative flex items-center justify-center', className)}>
       <div
         className={cn(
-          'relative rounded-full flex items-center justify-center transition-all duration-500',
-          sizeClasses[size],
+          'relative rounded-full flex items-center justify-center transition-all duration-500 overflow-hidden',
+          sizeConfig[size].container,
           stateColors[state]
         )}
       >
         {state === 'listening' && (
           <div className="absolute inset-0 rounded-full">
             <div className="absolute inset-0 rounded-full border-4 border-green-400 animate-ping opacity-30" />
-            <div className="absolute inset-2 rounded-full border-2 border-green-300 animate-ping opacity-20 animation-delay-150" />
+            <div className="absolute inset-2 rounded-full border-2 border-green-300 animate-ping opacity-20" style={{ animationDelay: '150ms' }} />
           </div>
         )}
 
         {state === 'speaking' && (
           <div className="absolute inset-0 rounded-full">
             <div className="absolute inset-0 rounded-full bg-purple-200 animate-pulse opacity-30" />
-            <SoundWaves className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-8" />
           </div>
         )}
 
         {state === 'thinking' && (
-          <div className="absolute -top-2 right-0">
+          <div className="absolute -top-1 -right-1 z-20">
             <ThinkingDots />
           </div>
         )}
 
-        <div className={cn('relative z-10 transition-transform duration-300', stateAnimations[state])}>
-          <AvatarSVG
-            emotion={emotion}
-            isListening={state === 'listening'}
-            isSpeaking={isAudioPlaying}
-            size={avatarSizes[size]}
-            className="drop-shadow-lg"
+        <div className={cn(
+          'relative z-10 transition-all duration-300',
+          state === 'connecting' && 'animate-pulse',
+          state === 'idle' && 'animate-float',
+        )}>
+          <Image
+            src={imageSrc}
+            alt="JournalBuddy"
+            width={sizeConfig[size].image}
+            height={sizeConfig[size].image}
+            className="object-contain drop-shadow-lg"
+            priority
           />
         </div>
       </div>
@@ -117,27 +138,10 @@ function StateIndicator({ state }: { state: VoiceChatState }) {
 
 function ThinkingDots() {
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1 bg-white/80 rounded-full px-2 py-1 shadow-sm">
       <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
       <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
       <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-    </div>
-  );
-}
-
-function SoundWaves({ className }: { className?: string }) {
-  return (
-    <div className={cn('flex items-end gap-0.5 h-8', className)}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div
-          key={i}
-          className="w-1 bg-purple-500 rounded-full animate-sound-wave"
-          style={{
-            height: '50%',
-            animationDelay: `${i * 100}ms`,
-          }}
-        />
-      ))}
     </div>
   );
 }
