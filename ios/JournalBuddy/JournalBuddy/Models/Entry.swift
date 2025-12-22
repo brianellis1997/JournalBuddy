@@ -47,11 +47,12 @@ struct Entry: Codable, Identifiable {
     var transcript: String?
     var mood: MoodType?
     var journalType: JournalType?
+    var themes: [String]?
     let createdAt: Date
     let updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, title, content, transcript, mood
+        case id, title, content, transcript, mood, themes
         case journalType = "journal_type"
         case createdAt = "created_at"
         case updatedAt = "updated_at"

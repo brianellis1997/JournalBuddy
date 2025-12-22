@@ -298,7 +298,7 @@ class VoiceAgentTools:
             logger.error(f"Error in recall_memory: {e}")
             return "Unable to search past entries."
 
-    async def create_journal_entry(self, title: str, content: str, mood: str) -> str:
+    async def create_journal_entry(self, title: str, content: str, mood: str, themes: list = None) -> str:
         from app.schemas.entry import EntryCreate
         from app.services.gamification import gamification_service
         from app.services.embedding import embedding_service
@@ -309,8 +309,11 @@ class VoiceAgentTools:
         if mood.lower() not in valid_moods:
             mood = "okay"
 
+        if themes:
+            themes = [t.lower().strip() for t in themes[:10]]
+
         transcript = None
-        logger.info(f"create_journal_entry called. session_id={self.session_id}")
+        logger.info(f"create_journal_entry called. session_id={self.session_id}, themes={themes}")
         if self.session_id:
             try:
                 result = await self.db.execute(
@@ -341,6 +344,7 @@ class VoiceAgentTools:
             transcript=transcript,
             mood=mood.lower(),
             journal_type=entry_journal_type,
+            themes=themes,
         )
 
         try:
@@ -454,15 +458,16 @@ class VoiceAgent:
             return await tool_handler.end_conversation(farewell_message)
 
         @tool
-        async def create_journal_entry(title: str, content: str, mood: str) -> str:
+        async def create_journal_entry(title: str, content: str, mood: str, themes: list = None) -> str:
             """Create a journal entry from the conversation.
 
             Args:
                 title: A meaningful title that captures the essence of their reflection (3-8 words)
                 content: A flowing summary of what the user shared during the conversation
                 mood: The user's mood - must be one of: great, good, okay, bad, terrible
+                themes: 3-5 key themes/topics from the conversation (e.g., ["work stress", "family", "sleep", "exercise goals"]). Extract meaningful topics they discussed, not generic words.
             """
-            return await tool_handler.create_journal_entry(title, content, mood)
+            return await tool_handler.create_journal_entry(title, content, mood, themes)
 
         @tool
         async def recall_memory(query: str) -> str:

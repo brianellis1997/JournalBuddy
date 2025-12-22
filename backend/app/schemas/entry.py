@@ -24,6 +24,7 @@ class EntryCreate(BaseModel):
     transcript: Optional[str] = None
     mood: Optional[MoodType] = None
     journal_type: Optional[JournalType] = None
+    themes: Optional[List[str]] = None
 
 
 class EntryUpdate(BaseModel):
@@ -40,6 +41,7 @@ class EntryResponse(BaseModel):
     transcript: Optional[str] = None
     mood: Optional[str]
     journal_type: Optional[str]
+    themes: Optional[List[str]] = None
     created_at: datetime
     updated_at: datetime
 

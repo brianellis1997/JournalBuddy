@@ -217,8 +217,39 @@ class InsightsService:
         }
 
     async def get_common_themes(self, user_id: UUID, days: int = 30, limit: int = 20) -> dict:
-        """Extract common themes/topics from entries."""
+        """Extract common themes/topics from entries using stored LLM-extracted themes."""
         since = datetime.utcnow() - timedelta(days=days)
+
+        result = await self.db.execute(
+            select(Entry.themes)
+            .where(
+                and_(
+                    Entry.user_id == user_id,
+                    Entry.created_at >= since,
+                    Entry.themes.isnot(None),
+                )
+            )
+            .order_by(Entry.created_at.desc())
+            .limit(100)
+        )
+
+        theme_counts = Counter()
+        entries_with_themes = 0
+        for row in result.fetchall():
+            if row.themes:
+                entries_with_themes += 1
+                for theme in row.themes:
+                    if theme and isinstance(theme, str):
+                        theme_counts[theme.lower().strip()] += 1
+
+        if entries_with_themes > 0:
+            top_themes = theme_counts.most_common(limit)
+            return {
+                "period_days": days,
+                "themes": [{"word": theme, "count": count} for theme, count in top_themes],
+                "total_entries_analyzed": entries_with_themes,
+                "source": "llm_extracted",
+            }
 
         result = await self.db.execute(
             select(Entry.content, Entry.title)
@@ -248,6 +279,7 @@ class InsightsService:
             "period_days": days,
             "themes": [{"word": word, "count": count} for word, count in top_words],
             "total_words_analyzed": len(filtered_words),
+            "source": "word_frequency",
         }
 
     async def get_streak_info(self, user_id: UUID) -> dict:

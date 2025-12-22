@@ -81,12 +81,16 @@ struct DayPattern: Codable, Identifiable {
 struct CommonThemes: Codable {
     let periodDays: Int
     let themes: [ThemeWord]
-    let totalWordsAnalyzed: Int
+    let totalWordsAnalyzed: Int?
+    let totalEntriesAnalyzed: Int?
+    let source: String?
 
     enum CodingKeys: String, CodingKey {
         case periodDays = "period_days"
         case themes
         case totalWordsAnalyzed = "total_words_analyzed"
+        case totalEntriesAnalyzed = "total_entries_analyzed"
+        case source
     }
 }
 
