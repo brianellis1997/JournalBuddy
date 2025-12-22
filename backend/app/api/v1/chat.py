@@ -1,8 +1,11 @@
 from typing import List, Optional
 from uuid import UUID
 import json
+import logging
 
 from fastapi import APIRouter, HTTPException, status
+
+logger = logging.getLogger(__name__)
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -53,6 +56,13 @@ async def list_voice_sessions(
         .limit(limit)
     )
     sessions = result.scalars().all()
+
+    if sessions:
+        s = sessions[0]
+        logger.info(f"voice-sessions: first session created_at={s.created_at}, tzinfo={s.created_at.tzinfo}")
+        from app.schemas.chat import serialize_datetime
+        logger.info(f"voice-sessions: serialized date = {serialize_datetime(s.created_at)}")
+
     return [
         VoiceSessionResponse(
             id=s.id,

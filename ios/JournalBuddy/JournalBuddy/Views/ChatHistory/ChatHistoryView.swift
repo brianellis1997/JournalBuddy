@@ -190,6 +190,24 @@ struct ChatSessionDetailView: View {
                     Text(error)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button("Try Again") {
+                        Task {
+                            await viewModel.loadSessionDetail(sessionId)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .font(.largeTitle)
+                        .foregroundColor(.gray)
+
+                    Text("Unable to load conversation")
+                        .font(.headline)
 
                     Button("Try Again") {
                         Task {
@@ -251,7 +269,7 @@ struct ChatSessionDetailView: View {
 
     private func messagesSection(_ messages: [ChatMessage]) -> some View {
         VStack(spacing: 12) {
-            ForEach(messages) { message in
+            ForEach(messages.filter { $0.role != .system }) { message in
                 MessageBubble(message: message)
             }
         }

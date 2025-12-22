@@ -332,17 +332,29 @@ class VoiceAgentTools:
         else:
             logger.warning("No session_id available, cannot build transcript")
 
+        entry_journal_type = self.journal_type if self.journal_type in ["morning", "evening"] else "freeform"
         entry_data = EntryCreate(
             title=title,
             content=content,
             transcript=transcript,
             mood=mood.lower(),
-            journal_type=self.journal_type,
+            journal_type=entry_journal_type,
         )
 
         try:
             entry = await entry_crud.create(self.db, entry_data, self.user_id)
             logger.info(f"Created journal entry: {entry.id} with title '{title}'")
+
+            if self.session_id:
+                try:
+                    session = await self.db.get(ChatSession, self.session_id)
+                    if session:
+                        session.entry_id = entry.id
+                        session.summary = content[:500] if len(content) > 500 else content
+                        await self.db.commit()
+                        logger.info(f"Linked entry {entry.id} to session {self.session_id}")
+                except Exception as link_err:
+                    logger.error(f"Failed to link entry to session: {link_err}")
 
             if self.journal_type == "morning":
                 await gamification_service.award_xp(self.db, self.user_id, "morning_journal", entry.id)
@@ -493,6 +505,7 @@ class VoiceAgent:
         user_message: str,
         chat_history: list,
         journal_type: str = None,
+        timezone: str = None,
     ) -> AsyncGenerator[str, None]:
         is_journal = journal_type in ["morning", "evening"]
         tool_handler = VoiceAgentTools(db, user_id, session_id, journal_type=journal_type)
@@ -511,6 +524,19 @@ class VoiceAgent:
         else:
             system_prompt = VOICE_SYSTEM_PROMPT
 
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        tz = timezone or "America/Los_Angeles"
+        try:
+            tz_info = ZoneInfo(tz)
+            tz_name = tz.replace("_", " ").split("/")[-1]
+        except Exception:
+            tz_info = ZoneInfo("America/Los_Angeles")
+            tz_name = "Pacific"
+        current_time = datetime.now(tz_info)
+        time_info = f"\n\nCurrent date and time: {current_time.strftime('%A, %B %d, %Y at %I:%M %p')} ({tz_name} Time)"
+        system_prompt += time_info
+
         system_messages = [SystemMessage(content=system_prompt)]
         if context and not is_journal:
             system_messages.append(SystemMessage(content=f"Context about this user:\n{context}"))
@@ -528,7 +554,55 @@ class VoiceAgent:
                 response = await llm_with_tools.ainvoke(messages)
                 logger.info(f"LLM response: content_len={len(response.content) if response.content else 0}, tool_calls={len(response.tool_calls) if response.tool_calls else 0}")
             except Exception as e:
-                logger.error(f"LLM error on iteration {iteration}: {e}", exc_info=True)
+                error_str = str(e)
+                logger.error(f"LLM error on iteration {iteration}: {e}")
+
+                # Try to recover from Groq's malformed tool call JSON errors
+                if "tool_use_failed" in error_str and "failed_generation" in error_str:
+                    try:
+                        import re
+                        # Extract the failed_generation JSON from the error
+                        match = re.search(r"'failed_generation':\s*'([^']+)'", error_str)
+                        if match:
+                            failed_json = match.group(1).replace("\\n", "").replace('\\"', '"')
+                            logger.info(f"Attempting to recover from failed tool call: {failed_json[:100]}...")
+
+                            # Try to parse what we can from the malformed JSON
+                            if "create_journal_entry" in failed_json:
+                                title_match = re.search(r'"title":\s*"([^"]*)"', failed_json)
+                                content_match = re.search(r'"content":\s*"([^"]*)"', failed_json)
+                                mood_match = re.search(r'"mood":\s*"([^"]*)"', failed_json)
+
+                                title = title_match.group(1) if title_match else "Voice Journal"
+                                content = content_match.group(1) if content_match else ""
+                                mood = mood_match.group(1) if mood_match else "okay"
+
+                                if title and not content:
+                                    # Generate a brief summary from conversation
+                                    content = f"A brief conversation where I shared my thoughts. {title}."
+
+                                logger.info(f"Recovered journal entry: title='{title}', content_len={len(content)}")
+                                yield "__TOOL_START:create_journal_entry__"
+                                try:
+                                    result = await tool_handler.create_journal_entry(title, content, mood)
+                                    logger.info(f"Recovery journal entry result: {result}")
+                                except Exception as create_err:
+                                    logger.error(f"Failed to create recovered journal entry: {create_err}")
+                                yield "__TOOL_DONE:create_journal_entry__"
+                                yield "Take care! Talk to you next time."
+                                yield "\n__END_CONVERSATION__"
+                                return
+
+                            elif "farewell_message" in failed_json or "end_conversation" in failed_json:
+                                farewell_match = re.search(r'"farewell_message":\s*"([^"]*)"', failed_json)
+                                farewell = farewell_match.group(1) if farewell_match else "Take care!"
+                                logger.info(f"Recovered farewell: {farewell}")
+                                yield farewell
+                                yield "\n__END_CONVERSATION__"
+                                return
+                    except Exception as recovery_error:
+                        logger.error(f"Failed to recover from malformed tool call: {recovery_error}")
+
                 if iteration < max_iterations - 1:
                     continue
                 yield "I'm here listening. Could you tell me more?"

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from sqlalchemy import String, Text, DateTime, Date, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -18,8 +18,8 @@ class Goal(Base):
     progress: Mapped[int] = mapped_column(Integer, default=0)
     target_date: Mapped[date] = mapped_column(Date, nullable=True)
     journaling_schedule: Mapped[str] = mapped_column(String(50), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="goals")
     progress_updates = relationship("GoalProgressUpdate", back_populates="goal", cascade="all, delete-orphan", order_by="GoalProgressUpdate.created_at.desc()")
@@ -34,7 +34,7 @@ class GoalProgressUpdate(Base):
     previous_progress: Mapped[int] = mapped_column(Integer, nullable=False)
     new_progress: Mapped[int] = mapped_column(Integer, nullable=False)
     notes: Mapped[str] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     goal = relationship("Goal", back_populates="progress_updates")
     session = relationship("ChatSession")

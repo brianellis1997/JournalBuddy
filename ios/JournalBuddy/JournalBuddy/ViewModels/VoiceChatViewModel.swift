@@ -31,7 +31,8 @@ class VoiceChatViewModel: ObservableObject {
         }
 
         state = .connecting
-        voiceChatService.start(token: token, journalType: journalType)
+        let voiceId = SettingsManager.shared.selectedVoiceId
+        voiceChatService.start(token: token, journalType: journalType, voiceId: voiceId)
     }
 
     func endSession() {

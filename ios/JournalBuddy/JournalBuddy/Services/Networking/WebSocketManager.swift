@@ -13,16 +13,25 @@ class WebSocketManager: NSObject {
     private var webSocket: URLSessionWebSocketTask?
     private var session: URLSession!
     private(set) var isConnected = false
+    private var isIntentionalDisconnect = false
 
     override init() {
         super.init()
         session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
     }
 
-    func connect(token: String, journalType: String? = nil) {
+    func connect(token: String, journalType: String? = nil, timezone: String? = nil, voiceId: String? = nil) {
+        isIntentionalDisconnect = false
+
         var urlString = "\(APIConstants.wsBaseURL)\(APIConstants.Endpoints.voiceChat)?token=\(token)"
         if let journalType = journalType {
             urlString += "&journal_type=\(journalType)"
+        }
+        if let timezone = timezone, let encoded = timezone.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            urlString += "&timezone=\(encoded)"
+        }
+        if let voiceId = voiceId, let encoded = voiceId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            urlString += "&voice=\(encoded)"
         }
 
         guard let url = URL(string: urlString) else {
@@ -36,8 +45,13 @@ class WebSocketManager: NSObject {
         receiveMessage()
     }
 
+    func markAsClosing() {
+        isIntentionalDisconnect = true
+    }
+
     func disconnect() {
         print("[WebSocket] Disconnecting")
+        isIntentionalDisconnect = true
         webSocket?.cancel(with: .normalClosure, reason: nil)
         webSocket = nil
         isConnected = false
@@ -95,7 +109,11 @@ class WebSocketManager: NSObject {
             case .failure(let error):
                 print("[WebSocket] Receive error: \(error)")
                 self?.isConnected = false
-                self?.delegate?.webSocketDidDisconnect(error: error)
+                if self?.isIntentionalDisconnect == true {
+                    self?.delegate?.webSocketDidDisconnect(error: nil)
+                } else {
+                    self?.delegate?.webSocketDidDisconnect(error: error)
+                }
             }
         }
     }

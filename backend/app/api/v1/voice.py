@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_user_from_token
 from app.services.deepgram_service import DeepgramStreamManager
-from app.services.cartesia_service import CartesiaStreamManager
+from app.services.cartesia_service import CartesiaStreamManager, AVAILABLE_VOICES
 from app.agent.voice_agent import voice_agent
 from app.crud.chat import chat_crud
 
@@ -18,13 +18,15 @@ router = APIRouter()
 
 
 class VoiceChatSession:
-    def __init__(self, websocket: WebSocket, user_id: str, db: AsyncSession, journal_type: Optional[str] = None):
+    def __init__(self, websocket: WebSocket, user_id: str, db: AsyncSession, journal_type: Optional[str] = None, timezone: Optional[str] = None, voice_id: Optional[str] = None):
         self.websocket = websocket
         self.user_id = user_id
         self.db = db
         self.journal_type = journal_type
+        self.timezone = timezone or "America/Los_Angeles"
         self.deepgram = DeepgramStreamManager()
-        self.cartesia = CartesiaStreamManager()
+        resolved_voice_id = AVAILABLE_VOICES.get(voice_id, voice_id) if voice_id else None
+        self.cartesia = CartesiaStreamManager(voice_id=resolved_voice_id)
         self.chat_history: list[dict] = []
         self.is_speaking = False
         self.current_generation_task: Optional[asyncio.Task] = None
@@ -111,6 +113,7 @@ class VoiceChatSession:
                     user_message,
                     self.chat_history[:-1],
                     journal_type=self.journal_type,
+                    timezone=self.timezone,
                 ):
                     if self._cancelled:
                         return
@@ -249,7 +252,12 @@ class VoiceChatSession:
                 break
 
     async def save_session_summary_on_close(self):
-        if not self.db_session_id or len(self.chat_history) < 2:
+        logger.info(f"save_session_summary_on_close: session_id={self.db_session_id}, chat_history_len={len(self.chat_history)}")
+        if not self.db_session_id:
+            logger.info("Skipping save: no db_session_id")
+            return
+        if len(self.chat_history) < 2:
+            logger.info(f"Skipping save: chat_history too short ({len(self.chat_history)} < 2)")
             return
 
         try:
@@ -326,13 +334,14 @@ TOPICS: [comma-separated key topics, max 5]"""
                     transcript_lines.append(f"{role}: {msg['content']}")
                 transcript = "\n\n".join(transcript_lines)
 
+                entry_journal_type = self.journal_type if self.journal_type in ["morning", "evening"] else "freeform"
                 entry = Entry(
                     user_id=self.user_id,
                     title=title,
                     content=entry_content,
                     transcript=transcript,
                     mood=mood,
-                    journal_type=self.journal_type,
+                    journal_type=entry_journal_type,
                 )
                 self.db.add(entry)
                 await self.db.flush()
@@ -364,11 +373,22 @@ TOPICS: [comma-separated key topics, max 5]"""
         await self.deepgram.close()
 
 
+@router.get("/voices")
+async def get_available_voices():
+    """Get list of available voices for TTS."""
+    return [
+        {"id": voice_id, "name": name.capitalize()}
+        for name, voice_id in AVAILABLE_VOICES.items()
+    ]
+
+
 @router.websocket("/chat")
 async def voice_chat(
     websocket: WebSocket,
     token: str = None,
     journal_type: str = None,
+    timezone: str = None,
+    voice: str = None,
     db: AsyncSession = Depends(get_db),
 ):
     await websocket.accept()
@@ -382,7 +402,7 @@ async def voice_chat(
         await websocket.close(code=4001)
         return
 
-    session = VoiceChatSession(websocket, str(user.id), db, journal_type=journal_type)
+    session = VoiceChatSession(websocket, str(user.id), db, journal_type=journal_type, timezone=timezone, voice_id=voice)
 
     try:
         await session.create_db_session()

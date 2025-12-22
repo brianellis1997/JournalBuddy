@@ -15,6 +15,7 @@ struct ChatMessage: Codable, Identifiable {
 enum MessageRole: String, Codable {
     case user
     case assistant
+    case system
 }
 
 struct ChatSession: Codable, Identifiable {

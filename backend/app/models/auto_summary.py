@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from sqlalchemy import String, Text, DateTime, Date, Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -21,7 +21,7 @@ class AutoSummary(Base):
     key_themes: Mapped[str] = mapped_column(Text, nullable=True)
     goal_progress: Mapped[str] = mapped_column(Text, nullable=True)
     entry_count: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         UniqueConstraint('user_id', 'period_type', 'period_start', name='uq_user_period'),

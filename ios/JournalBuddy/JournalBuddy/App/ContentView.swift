@@ -256,6 +256,14 @@ struct ProfileView: View {
                             Label("Chat History", systemImage: "bubble.left.and.bubble.right")
                         }
                     }
+
+                    Section("Settings") {
+                        NavigationLink {
+                            VoiceSettingsView()
+                        } label: {
+                            Label("Buddy's Voice", systemImage: "waveform")
+                        }
+                    }
                 }
 
                 Section {

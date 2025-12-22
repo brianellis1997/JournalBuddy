@@ -47,6 +47,9 @@
 		A1000046233F0046 /* ChatHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000046233F0046 /* ChatHistoryViewModel.swift */; };
 		A1000061233F0061 /* GamificationDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000061233F0061 /* GamificationDashboardView.swift */; };
 		A1000062233F0062 /* ChatHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000062233F0062 /* ChatHistoryView.swift */; };
+		A1000017233F0017 /* Voice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017233F0017 /* Voice.swift */; };
+		A1000024233F0024 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000024233F0024 /* SettingsManager.swift */; };
+		A1000063233F0063 /* VoiceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000063233F0063 /* VoiceSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,6 +93,9 @@
 		A2000046233F0046 /* ChatHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryViewModel.swift; sourceTree = "<group>"; };
 		A2000061233F0061 /* GamificationDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationDashboardView.swift; sourceTree = "<group>"; };
 		A2000062233F0062 /* ChatHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryView.swift; sourceTree = "<group>"; };
+		A2000017233F0017 /* Voice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Voice.swift; sourceTree = "<group>"; };
+		A2000024233F0024 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		A2000063233F0063 /* VoiceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSettingsView.swift; sourceTree = "<group>"; };
 		A3000000233F0000 /* JournalBuddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JournalBuddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -162,6 +168,7 @@
 				A2000014233F0014 /* GamificationStats.swift */,
 				A2000015233F0015 /* AutoSummary.swift */,
 				A2000016233F0016 /* VoiceControlMessage.swift */,
+				A2000017233F0017 /* Voice.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -197,6 +204,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000023233F0023 /* KeychainManager.swift */,
+				A2000024233F0024 /* SettingsManager.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -261,6 +269,7 @@
 				A5000065233F0065 /* VoiceChat */,
 				A5000066233F0066 /* Gamification */,
 				A5000067233F0067 /* ChatHistory */,
+				A5000068233F0068 /* Settings */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -325,6 +334,14 @@
 				A2000062233F0062 /* ChatHistoryView.swift */,
 			);
 			path = ChatHistory;
+			sourceTree = "<group>";
+		};
+		A5000068233F0068 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A2000063233F0063 /* VoiceSettingsView.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -435,6 +452,9 @@
 				A1000046233F0046 /* ChatHistoryViewModel.swift in Sources */,
 				A1000061233F0061 /* GamificationDashboardView.swift in Sources */,
 				A1000062233F0062 /* ChatHistoryView.swift in Sources */,
+				A1000017233F0017 /* Voice.swift in Sources */,
+				A1000024233F0024 /* SettingsManager.swift in Sources */,
+				A1000063233F0063 /* VoiceSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,6 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
+
+
+def serialize_datetime(dt: datetime) -> str:
+    """Serialize datetime to ISO format with Z suffix for iOS compatibility."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    utc_dt = dt.astimezone(timezone.utc)
+    return utc_dt.strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
 
 
 class AchievementResponse(BaseModel):
@@ -12,6 +22,10 @@ class AchievementResponse(BaseModel):
     progress: Optional[int]
     target: Optional[int]
 
+    @field_serializer('unlocked_at')
+    def serialize_unlocked_at(self, dt: Optional[datetime]) -> Optional[str]:
+        return serialize_datetime(dt) if dt else None
+
 
 class XPEventResponse(BaseModel):
     event_type: str
@@ -20,6 +34,10 @@ class XPEventResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, dt: datetime) -> str:
+        return serialize_datetime(dt)
 
 
 class GamificationStats(BaseModel):

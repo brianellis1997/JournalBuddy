@@ -45,7 +45,8 @@ enum APIConstants {
         static let weeklySummary = "/summaries/weekly"
         static let monthlySummary = "/summaries/monthly"
 
-        // Voice WebSocket
+        // Voice
         static let voiceChat = "/voice/chat"
+        static let voices = "/voice/voices"
     }
 }

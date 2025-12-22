@@ -30,6 +30,9 @@ async def list_entries(
     entries, total = await entry_crud.get_multi(
         db, current_user.id, skip=skip, limit=limit, search=search, journal_type=journal_type
     )
+    logger.info(f"list_entries: user={current_user.id}, page={page}, total={total}, returned={len(entries)}, filter={journal_type}")
+    if entries and page == 1:
+        logger.info(f"First entry: id={entries[0].id}, title={entries[0].title}, type={entries[0].journal_type}")
     return EntryListResponse(
         entries=entries,
         total=total,

@@ -40,6 +40,7 @@ class VoiceChatService: NSObject {
     private var thinkingTimeoutTimer: Timer?
     private var token: String?
     private var createdEntryId: UUID?
+    private var isEndingConversation: Bool = false
 
     override init() {
         super.init()
@@ -47,10 +48,11 @@ class VoiceChatService: NSObject {
         audioEngine.delegate = self
     }
 
-    func start(token: String, journalType: String? = nil) {
+    func start(token: String, journalType: String? = nil, voiceId: String? = nil) {
         self.token = token
         state = .connecting
-        webSocketManager.connect(token: token, journalType: journalType)
+        let timezone = TimeZone.current.identifier
+        webSocketManager.connect(token: token, journalType: journalType, timezone: timezone, voiceId: voiceId)
     }
 
     func stop() {
@@ -63,6 +65,7 @@ class VoiceChatService: NSObject {
         thinkingTimeoutTimer = nil
         isAudioPlaying = false
         isMuted = false
+        isEndingConversation = false
         state = .disconnected
     }
 
@@ -197,7 +200,7 @@ extension VoiceChatService: WebSocketManagerDelegate {
         audioEngine.reset()
         state = .disconnected
 
-        if let error = error {
+        if let error = error, !isEndingConversation {
             delegate?.voiceChatDidError("Connection lost: \(error.localizedDescription)")
         }
     }
@@ -256,8 +259,12 @@ extension VoiceChatService: WebSocketManagerDelegate {
             state = .idle
 
         case .conversationEnded:
+            isEndingConversation = true
+            webSocketManager.markAsClosing()
             delegate?.voiceChatDidEnd(entryId: createdEntryId)
-            stop()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                self?.stop()
+            }
 
         case .error:
             if let errorMsg = message.data?.message {

@@ -24,7 +24,6 @@ actor APIClient {
     // MARK: - Auth Endpoints
 
     func login(email: String, password: String) async throws -> Token {
-        let body = LoginRequest(email: email, password: password)
         let formData = "username=\(email)&password=\(password)"
             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
 
@@ -252,6 +251,15 @@ actor APIClient {
         return try await request(
             endpoint: APIConstants.Endpoints.weeklySummary,
             method: "POST"
+        )
+    }
+
+    // MARK: - Voice Endpoints
+
+    func getVoices() async throws -> [Voice] {
+        return try await request(
+            endpoint: APIConstants.Endpoints.voices,
+            method: "GET"
         )
     }
 

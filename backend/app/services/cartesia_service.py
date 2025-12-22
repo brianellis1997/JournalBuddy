@@ -93,10 +93,23 @@ class CartesiaService:
             return response.json()
 
 
+AVAILABLE_VOICES = {
+    "carson": "a0e99841-438c-4a64-b679-ae501e7d6091",
+    "brooke": "e07c00bc-4134-4eae-9ea4-1a55fb45746b",
+    "caroline": "f9836c6e-a0bd-460e-9d3c-f7299fa60f94",
+    "blake": "a167e0f3-df7e-4d52-a9c3-f949145efdab",
+    "theo": "79f8b5fb-2cc8-479a-80df-29f7a7cf1a3e",
+    "daniela": "5c5ad5e7-1020-476b-8b91-fdcbe9cc313c",
+    "ayush": "791d5162-d5eb-40f0-8189-f19db44611d8",
+}
+
+DEFAULT_VOICE = "carson"
+
+
 class CartesiaStreamManager:
-    def __init__(self):
+    def __init__(self, voice_id: str = None):
         self.api_key = settings.cartesia_api_key
-        self.voice_id = settings.cartesia_voice_id
+        self.voice_id = voice_id or settings.cartesia_voice_id
         self.model_id = "sonic-english"
         self.sample_rate = 24000
         self._cancelled = False

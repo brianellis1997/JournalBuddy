@@ -1,10 +1,20 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Literal
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 
 
 RoleType = Literal["user", "assistant", "system"]
+
+
+def serialize_datetime(dt: datetime) -> str:
+    """Serialize datetime to ISO format with Z suffix for iOS compatibility."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    utc_dt = dt.astimezone(timezone.utc)
+    return utc_dt.strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
 
 
 class ChatMessageCreate(BaseModel):
@@ -19,6 +29,10 @@ class ChatMessageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, dt: datetime) -> str:
+        return serialize_datetime(dt)
 
 
 class ChatSessionCreate(BaseModel):
@@ -38,6 +52,10 @@ class ChatSessionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+    @field_serializer('created_at')
+    def serialize_created_at(self, dt: datetime) -> str:
+        return serialize_datetime(dt)
+
 
 class VoiceSessionResponse(BaseModel):
     id: UUID
@@ -50,3 +68,7 @@ class VoiceSessionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, dt: datetime) -> str:
+        return serialize_datetime(dt)
