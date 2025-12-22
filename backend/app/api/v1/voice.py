@@ -373,6 +373,9 @@ TOPICS: [comma-separated key topics, max 5]"""
         await self.deepgram.close()
 
 
+VOICE_PREVIEW_MESSAGE = "Hey there! I'm your Journal Buddy. How's your day going?"
+
+
 @router.get("/voices")
 async def get_available_voices():
     """Get list of available voices for TTS."""
@@ -380,6 +383,32 @@ async def get_available_voices():
         {"id": voice_id, "name": name.capitalize()}
         for name, voice_id in AVAILABLE_VOICES.items()
     ]
+
+
+@router.get("/preview/{voice_id}")
+async def get_voice_preview(voice_id: str):
+    """Generate a preview audio clip for a voice."""
+    from fastapi.responses import Response
+
+    resolved_voice_id = AVAILABLE_VOICES.get(voice_id.lower(), voice_id)
+    cartesia = CartesiaStreamManager(voice_id=resolved_voice_id)
+
+    audio_chunks = []
+    async for chunk in cartesia.synthesize_streaming(async_generator_from_string(VOICE_PREVIEW_MESSAGE)):
+        audio_chunks.append(chunk)
+
+    audio_data = b"".join(audio_chunks)
+
+    return Response(
+        content=audio_data,
+        media_type="audio/pcm",
+        headers={
+            "Content-Disposition": f"inline; filename=preview_{voice_id}.pcm",
+            "X-Sample-Rate": "24000",
+            "X-Channels": "1",
+            "X-Bit-Depth": "16",
+        }
+    )
 
 
 @router.websocket("/chat")

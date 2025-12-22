@@ -298,7 +298,7 @@ class AudioEngineManager {
         let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: outputSampleRate, channels: 1, interleaved: true)!
         engine.connect(node, to: engine.mainMixerNode, format: format)
 
-        engine.mainMixerNode.outputVolume = 2.0
+        engine.mainMixerNode.outputVolume = 4.0
 
         bufferLock.lock()
         scheduledBufferCount = 0
@@ -307,7 +307,7 @@ class AudioEngineManager {
 
         do {
             try engine.start()
-            print("[Audio] Player setup complete, volume boosted to 2.0")
+            print("[Audio] Player setup complete, volume boosted to 4.0")
         } catch {
             print("[Audio] Failed to setup player: \(error)")
         }

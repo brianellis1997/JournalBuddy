@@ -48,5 +48,6 @@ enum APIConstants {
         // Voice
         static let voiceChat = "/voice/chat"
         static let voices = "/voice/voices"
+        static func voicePreview(_ voiceId: String) -> String { "/voice/preview/\(voiceId)" }
     }
 }

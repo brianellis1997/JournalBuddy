@@ -263,6 +263,29 @@ actor APIClient {
         )
     }
 
+    func getVoicePreview(voiceId: String) async throws -> Data {
+        let url = baseURL.appendingPathComponent(APIConstants.Endpoints.voicePreview(voiceId))
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        if let accessToken = await KeychainManager.shared.getAccessToken() {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.httpError(statusCode: httpResponse.statusCode, message: "Failed to get voice preview")
+        }
+
+        return data
+    }
+
     // MARK: - Generic Request
 
     private func request<T: Decodable>(
