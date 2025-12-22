@@ -13,6 +13,8 @@ class VoiceChatViewModel: ObservableObject {
     @Published var showEndConfirmation = false
     @Published var createdEntryId: UUID?
     @Published var error: String?
+    @Published var isTextOnlyMode: Bool = false
+    @Published var textOnlyMessage: String?
 
     private let voiceChatService = VoiceChatService()
 
@@ -125,6 +127,13 @@ extension VoiceChatViewModel: VoiceChatServiceDelegate {
     nonisolated func voiceChatWillStartAssistantResponse() {
         Task { @MainActor in
             self.assistantText = ""
+        }
+    }
+
+    nonisolated func voiceChatTTSUnavailable(_ message: String) {
+        Task { @MainActor in
+            self.isTextOnlyMode = true
+            self.textOnlyMessage = message
         }
     }
 }

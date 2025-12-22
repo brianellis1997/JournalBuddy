@@ -113,12 +113,22 @@ class CartesiaStreamManager:
         self.model_id = "sonic-english"
         self.sample_rate = 24000
         self._cancelled = False
+        self._tts_available = True
+        self._tts_error_message = None
 
     def cancel(self):
         self._cancelled = True
 
     def reset(self):
         self._cancelled = False
+
+    @property
+    def is_tts_available(self) -> bool:
+        return self._tts_available
+
+    @property
+    def tts_error(self) -> str | None:
+        return self._tts_error_message
 
     async def synthesize_streaming(
         self,
@@ -161,18 +171,18 @@ class CartesiaStreamManager:
                 yield audio_chunk
 
     async def _synthesize_sentence(self, text: str, chunk_size: int) -> AsyncGenerator[bytes, None]:
-        # Skip empty or invalid text
+        if not self._tts_available:
+            return
+
         if not text or len(text.strip()) == 0:
             logger.warning("Skipping TTS for empty text")
             return
 
-        # Skip JSON-like content that shouldn't be spoken
         stripped = text.strip()
         if stripped.startswith('{') and stripped.endswith('}'):
             logger.warning(f"Skipping TTS for JSON-like content: {text[:50]}")
             return
 
-        # Skip control messages
         if stripped.startswith('__') and stripped.endswith('__'):
             logger.warning(f"Skipping TTS for control message: {text[:50]}")
             return
@@ -207,9 +217,15 @@ class CartesiaStreamManager:
                     response.raise_for_status()
                     async for chunk in response.aiter_bytes(chunk_size=chunk_size):
                         yield chunk
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in (402, 429, 403):
+                    self._tts_available = False
+                    self._tts_error_message = f"TTS unavailable: {e.response.status_code}"
+                    logger.warning(f"TTS credits exhausted or rate limited ({e.response.status_code}). Continuing in text-only mode.")
+                else:
+                    logger.error(f"TTS HTTP error: {e}")
             except Exception as e:
                 logger.error(f"TTS error: {e}")
-                raise
 
 
 cartesia_service = CartesiaService()

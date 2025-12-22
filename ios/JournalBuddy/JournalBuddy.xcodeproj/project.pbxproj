@@ -50,6 +50,11 @@
 		A1000017233F0017 /* Voice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017233F0017 /* Voice.swift */; };
 		A1000024233F0024 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000024233F0024 /* SettingsManager.swift */; };
 		A1000063233F0063 /* VoiceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000063233F0063 /* VoiceSettingsView.swift */; };
+		A1000064233F0064 /* Insights.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000064233F0064 /* Insights.swift */; };
+		A1000065233F0065 /* InsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000065233F0065 /* InsightsViewModel.swift */; };
+		A1000066233F0066 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000066233F0066 /* InsightsView.swift */; };
+		A1000067233F0067 /* LottieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000067233F0067 /* LottieView.swift */; };
+		A1000068233F0068 /* LottieAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000068233F0068 /* LottieAvatarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -96,6 +101,11 @@
 		A2000017233F0017 /* Voice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Voice.swift; sourceTree = "<group>"; };
 		A2000024233F0024 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A2000063233F0063 /* VoiceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSettingsView.swift; sourceTree = "<group>"; };
+		A2000064233F0064 /* Insights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Insights.swift; sourceTree = "<group>"; };
+		A2000065233F0065 /* InsightsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsViewModel.swift; sourceTree = "<group>"; };
+		A2000066233F0066 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
+		A2000067233F0067 /* LottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
+		A2000068233F0068 /* LottieAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAvatarView.swift; sourceTree = "<group>"; };
 		A3000000233F0000 /* JournalBuddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JournalBuddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -169,6 +179,7 @@
 				A2000015233F0015 /* AutoSummary.swift */,
 				A2000016233F0016 /* VoiceControlMessage.swift */,
 				A2000017233F0017 /* Voice.swift */,
+				A2000064233F0064 /* Insights.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -255,6 +266,7 @@
 				A2000044233F0044 /* VoiceChatViewModel.swift */,
 				A2000045233F0045 /* GamificationViewModel.swift */,
 				A2000046233F0046 /* ChatHistoryViewModel.swift */,
+				A2000065233F0065 /* InsightsViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -270,6 +282,8 @@
 				A5000066233F0066 /* Gamification */,
 				A5000067233F0067 /* ChatHistory */,
 				A5000068233F0068 /* Settings */,
+				A5000069233F0069 /* Insights */,
+				A500006A233F006A /* Components */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -279,6 +293,7 @@
 			children = (
 				A2000059233F0059 /* VoiceChatView.swift */,
 				A2000060233F0060 /* AvatarView.swift */,
+				A2000068233F0068 /* LottieAvatarView.swift */,
 			);
 			path = VoiceChat;
 			sourceTree = "<group>";
@@ -342,6 +357,22 @@
 				A2000063233F0063 /* VoiceSettingsView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		A5000069233F0069 /* Insights */ = {
+			isa = PBXGroup;
+			children = (
+				A2000066233F0066 /* InsightsView.swift */,
+			);
+			path = Insights;
+			sourceTree = "<group>";
+		};
+		A500006A233F006A /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A2000067233F0067 /* LottieView.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -455,6 +486,9 @@
 				A1000017233F0017 /* Voice.swift in Sources */,
 				A1000024233F0024 /* SettingsManager.swift in Sources */,
 				A1000063233F0063 /* VoiceSettingsView.swift in Sources */,
+				A1000064233F0064 /* Insights.swift in Sources */,
+				A1000065233F0065 /* InsightsViewModel.swift in Sources */,
+				A1000066233F0066 /* InsightsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

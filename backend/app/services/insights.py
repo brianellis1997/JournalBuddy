@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta
 from uuid import UUID
 from collections import Counter
-from sqlalchemy import select, func, and_, extract
+from sqlalchemy import select, func, and_, extract, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.entry import Entry
@@ -48,9 +48,10 @@ class InsightsService:
         """Get mood trends over time."""
         since = datetime.utcnow() - timedelta(days=days)
 
+        date_col = func.date_trunc('day', Entry.created_at).label('date')
         result = await self.db.execute(
             select(
-                func.date_trunc('day', Entry.created_at).label('date'),
+                date_col,
                 Entry.mood,
                 func.count(Entry.id).label('count'),
             )
@@ -61,8 +62,8 @@ class InsightsService:
                     Entry.mood.isnot(None),
                 )
             )
-            .group_by(func.date_trunc('day', Entry.created_at), Entry.mood)
-            .order_by(func.date_trunc('day', Entry.created_at))
+            .group_by(date_col, Entry.mood)
+            .order_by(date_col)
         )
 
         daily_data = {}
@@ -118,9 +119,10 @@ class InsightsService:
         """Analyze patterns by day of week."""
         since = datetime.utcnow() - timedelta(days=days)
 
+        dow_col = extract('dow', Entry.created_at).label('day_of_week')
         result = await self.db.execute(
             select(
-                extract('dow', Entry.created_at).label('day_of_week'),
+                dow_col,
                 Entry.mood,
                 func.count(Entry.id).label('count'),
             )
@@ -131,7 +133,7 @@ class InsightsService:
                     Entry.mood.isnot(None),
                 )
             )
-            .group_by(extract('dow', Entry.created_at), Entry.mood)
+            .group_by(dow_col, Entry.mood)
         )
 
         day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -181,7 +183,7 @@ class InsightsService:
                 Entry.journal_type,
                 func.count(Entry.id).label('count'),
                 func.avg(
-                    func.case(
+                    case(
                         (Entry.mood == 'terrible', 1),
                         (Entry.mood == 'bad', 2),
                         (Entry.mood == 'okay', 3),
@@ -250,11 +252,12 @@ class InsightsService:
 
     async def get_streak_info(self, user_id: UUID) -> dict:
         """Get journaling streak information."""
+        date_col = func.date_trunc('day', Entry.created_at).label('date')
         result = await self.db.execute(
-            select(func.date_trunc('day', Entry.created_at).label('date'))
+            select(date_col)
             .where(Entry.user_id == user_id)
-            .group_by(func.date_trunc('day', Entry.created_at))
-            .order_by(func.date_trunc('day', Entry.created_at).desc())
+            .group_by(date_col)
+            .order_by(date_col.desc())
         )
 
         dates = [row.date.date() for row in result.fetchall()]

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VoiceChatView: View {
     @StateObject private var viewModel = VoiceChatViewModel()
+    @ObservedObject private var settingsManager = SettingsManager.shared
     @Environment(\.dismiss) private var dismiss
 
     let journalType: String?
@@ -16,6 +17,10 @@ struct VoiceChatView: View {
 
             VStack(spacing: 0) {
                 header
+
+                if viewModel.isTextOnlyMode {
+                    textOnlyBanner
+                }
 
                 Spacer()
 
@@ -70,6 +75,24 @@ struct VoiceChatView: View {
         .ignoresSafeArea()
     }
 
+    private var textOnlyBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "speaker.slash.fill")
+                .font(.caption)
+            Text("Text-only mode")
+                .font(.caption)
+                .fontWeight(.medium)
+        }
+        .foregroundColor(.white.opacity(0.9))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.orange.opacity(0.7))
+        .cornerRadius(16)
+        .padding(.top, 4)
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .animation(.easeInOut(duration: 0.3), value: viewModel.isTextOnlyMode)
+    }
+
     private var header: some View {
         HStack {
             Button {
@@ -116,9 +139,18 @@ struct VoiceChatView: View {
         }
     }
 
+    @ViewBuilder
+    private var avatarView: some View {
+        AvatarView(
+            state: viewModel.state,
+            emotion: viewModel.emotion,
+            isAudioPlaying: viewModel.isAudioPlaying
+        )
+    }
+
     private var avatarSection: some View {
         VStack(spacing: 20) {
-            AvatarView(state: viewModel.state, emotion: viewModel.emotion, isAudioPlaying: viewModel.isAudioPlaying)
+            avatarView
 
             if viewModel.isListening {
                 AudioWaveformView(isActive: true, color: .green)

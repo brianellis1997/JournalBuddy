@@ -135,6 +135,26 @@ struct VoiceSettingsView: View {
             } footer: {
                 Text("Tap a voice to select it and hear a preview.")
             }
+
+            Section {
+                Toggle(isOn: $settingsManager.useLottieAnimations) {
+                    HStack {
+                        Image(systemName: "figure.wave")
+                            .foregroundColor(.journalSecondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Animated Avatar")
+                            Text("Use Lottie animations for Buddy")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .tint(.journalPrimary)
+            } header: {
+                Text("Avatar")
+            } footer: {
+                Text("Animated avatars provide expressive reactions during conversations. Requires Lottie animation files.")
+            }
         }
         .navigationTitle("Voice Settings")
         .task {

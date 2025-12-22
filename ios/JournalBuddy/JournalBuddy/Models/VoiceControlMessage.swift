@@ -13,6 +13,7 @@ enum VoiceMessageType: String, Codable {
     case emotion
     case interrupted
     case conversationEnded = "conversation_ended"
+    case ttsUnavailable = "tts_unavailable"
     case error
     case pong
 }

@@ -286,6 +286,49 @@ actor APIClient {
         return data
     }
 
+    // MARK: - Insights Endpoints
+
+    func getInsightsSummary() async throws -> InsightsSummary {
+        return try await request(
+            endpoint: APIConstants.Endpoints.insightsSummary,
+            method: "GET"
+        )
+    }
+
+    func getMoodTrends(days: Int = 30) async throws -> MoodTrends {
+        return try await request(
+            endpoint: APIConstants.Endpoints.insightsMoodTrends,
+            method: "GET",
+            queryItems: [URLQueryItem(name: "days", value: "\(days)")]
+        )
+    }
+
+    func getDayPatterns(days: Int = 90) async throws -> DayPatterns {
+        return try await request(
+            endpoint: APIConstants.Endpoints.insightsPatterns,
+            method: "GET",
+            queryItems: [URLQueryItem(name: "days", value: "\(days)")]
+        )
+    }
+
+    func getCommonThemes(days: Int = 30, limit: Int = 20) async throws -> CommonThemes {
+        return try await request(
+            endpoint: APIConstants.Endpoints.insightsThemes,
+            method: "GET",
+            queryItems: [
+                URLQueryItem(name: "days", value: "\(days)"),
+                URLQueryItem(name: "limit", value: "\(limit)")
+            ]
+        )
+    }
+
+    func getStreakInfo() async throws -> StreakInfo {
+        return try await request(
+            endpoint: APIConstants.Endpoints.insightsStreak,
+            method: "GET"
+        )
+    }
+
     // MARK: - Generic Request
 
     private func request<T: Decodable>(

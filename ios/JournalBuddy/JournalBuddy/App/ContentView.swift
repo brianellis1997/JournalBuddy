@@ -245,6 +245,12 @@ struct ProfileView: View {
 
                     Section("Activity") {
                         NavigationLink {
+                            InsightsView()
+                        } label: {
+                            Label("Insights Dashboard", systemImage: "chart.bar.xaxis")
+                        }
+
+                        NavigationLink {
                             GamificationDashboardView()
                         } label: {
                             Label("Achievements & Progress", systemImage: "trophy.fill")

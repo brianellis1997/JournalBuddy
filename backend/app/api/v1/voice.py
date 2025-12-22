@@ -142,6 +142,7 @@ class VoiceChatSession:
 
             await self.send_message("assistant_speaking")
 
+            tts_was_available = self.cartesia.is_tts_available
             async for audio_chunk in self.cartesia.synthesize_streaming(text_generator()):
                 if self._cancelled:
                     break
@@ -150,6 +151,13 @@ class VoiceChatSession:
                 except Exception as e:
                     logger.warning(f"Failed to send audio chunk: {e}")
                     break
+
+            if tts_was_available and not self.cartesia.is_tts_available:
+                await self.send_message("tts_unavailable", {
+                    "message": "Voice credits exhausted. Continuing in text-only mode.",
+                    "reason": self.cartesia.tts_error or "credits_exhausted"
+                })
+                logger.warning("TTS became unavailable during session")
 
             if not self._cancelled:
                 logger.info(f"Response complete. full_response length: {len(full_response)}, has_sent_text: {has_sent_text}")

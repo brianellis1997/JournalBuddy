@@ -8,6 +8,7 @@ class SettingsManager: ObservableObject {
     private enum Keys {
         static let selectedVoiceId = "selectedVoiceId"
         static let selectedVoiceName = "selectedVoiceName"
+        static let useLottieAnimations = "useLottieAnimations"
     }
 
     @Published var selectedVoice: Voice? {
@@ -22,7 +23,15 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    @Published var useLottieAnimations: Bool {
+        didSet {
+            defaults.set(useLottieAnimations, forKey: Keys.useLottieAnimations)
+        }
+    }
+
     private init() {
+        self.useLottieAnimations = defaults.bool(forKey: Keys.useLottieAnimations)
+
         if let id = defaults.string(forKey: Keys.selectedVoiceId),
            let name = defaults.string(forKey: Keys.selectedVoiceName) {
             self.selectedVoice = Voice(id: id, name: name)

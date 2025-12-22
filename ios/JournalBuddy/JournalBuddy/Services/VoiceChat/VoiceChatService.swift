@@ -10,6 +10,7 @@ protocol VoiceChatServiceDelegate: AnyObject {
     func voiceChatDidUpdateAudioPlaying(_ isPlaying: Bool)
     func voiceChatDidUpdateMuted(_ isMuted: Bool)
     func voiceChatWillStartAssistantResponse()
+    func voiceChatTTSUnavailable(_ message: String)
 }
 
 class VoiceChatService: NSObject {
@@ -270,6 +271,10 @@ extension VoiceChatService: WebSocketManagerDelegate {
             if let errorMsg = message.data?.message {
                 delegate?.voiceChatDidError(errorMsg)
             }
+
+        case .ttsUnavailable:
+            let msg = message.data?.message ?? "Voice unavailable. Continuing in text-only mode."
+            delegate?.voiceChatTTSUnavailable(msg)
 
         case .connected, .pong:
             break
