@@ -215,6 +215,30 @@ actor APIClient {
         )
     }
 
+    // MARK: - Chat Session Endpoints
+
+    func getVoiceSessions(limit: Int = 20) async throws -> [VoiceSession] {
+        return try await request(
+            endpoint: "/chat/voice-sessions",
+            method: "GET",
+            queryItems: [URLQueryItem(name: "limit", value: "\(limit)")]
+        )
+    }
+
+    func getChatSession(_ id: UUID) async throws -> ChatSession {
+        return try await request(
+            endpoint: APIConstants.Endpoints.chatSession(id),
+            method: "GET"
+        )
+    }
+
+    func deleteChatSession(_ id: UUID) async throws {
+        let _: EmptyResponse = try await request(
+            endpoint: APIConstants.Endpoints.chatSession(id),
+            method: "DELETE"
+        )
+    }
+
     // MARK: - Summary Endpoints
 
     func getSummaries() async throws -> AutoSummaryListResponse {

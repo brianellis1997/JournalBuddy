@@ -172,6 +172,15 @@ struct VoiceChatTabView: View {
                 }
             }
             .navigationTitle("Talk")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        ChatHistoryView()
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                }
+            }
             .fullScreenCover(isPresented: $showVoiceChat) {
                 VoiceChatView(journalType: selectedJournalType)
             }
@@ -216,21 +225,35 @@ struct ProfileView: View {
 
                     if let level = user.level, let xp = user.totalXP {
                         Section("Progress") {
-                            HStack {
-                                Label("Level", systemImage: "star.fill")
-                                    .foregroundColor(.levelPurple)
-                                Spacer()
-                                Text("\(level)")
-                                    .fontWeight(.semibold)
+                            NavigationLink {
+                                GamificationDashboardView()
+                            } label: {
+                                HStack {
+                                    Label("Level \(level)", systemImage: "star.fill")
+                                        .foregroundColor(.levelPurple)
+                                    Spacer()
+                                    Text("\(xp) XP")
+                                        .foregroundColor(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
+                            .buttonStyle(.plain)
+                        }
+                    }
 
-                            HStack {
-                                Label("Total XP", systemImage: "bolt.fill")
-                                    .foregroundColor(.xpGold)
-                                Spacer()
-                                Text("\(xp)")
-                                    .fontWeight(.semibold)
-                            }
+                    Section("Activity") {
+                        NavigationLink {
+                            GamificationDashboardView()
+                        } label: {
+                            Label("Achievements & Progress", systemImage: "trophy.fill")
+                        }
+
+                        NavigationLink {
+                            ChatHistoryView()
+                        } label: {
+                            Label("Chat History", systemImage: "bubble.left.and.bubble.right")
                         }
                     }
                 }

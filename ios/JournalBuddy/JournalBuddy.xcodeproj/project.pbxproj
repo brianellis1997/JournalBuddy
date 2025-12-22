@@ -43,6 +43,10 @@
 		A1000058233F0058 /* GoalEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000058233F0058 /* GoalEditorView.swift */; };
 		A1000059233F0059 /* VoiceChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000059233F0059 /* VoiceChatView.swift */; };
 		A1000060233F0060 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000060233F0060 /* AvatarView.swift */; };
+		A1000045233F0045 /* GamificationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000045233F0045 /* GamificationViewModel.swift */; };
+		A1000046233F0046 /* ChatHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000046233F0046 /* ChatHistoryViewModel.swift */; };
+		A1000061233F0061 /* GamificationDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000061233F0061 /* GamificationDashboardView.swift */; };
+		A1000062233F0062 /* ChatHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000062233F0062 /* ChatHistoryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,6 +86,10 @@
 		A2000058233F0058 /* GoalEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalEditorView.swift; sourceTree = "<group>"; };
 		A2000059233F0059 /* VoiceChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceChatView.swift; sourceTree = "<group>"; };
 		A2000060233F0060 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
+		A2000045233F0045 /* GamificationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationViewModel.swift; sourceTree = "<group>"; };
+		A2000046233F0046 /* ChatHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryViewModel.swift; sourceTree = "<group>"; };
+		A2000061233F0061 /* GamificationDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationDashboardView.swift; sourceTree = "<group>"; };
+		A2000062233F0062 /* ChatHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryView.swift; sourceTree = "<group>"; };
 		A3000000233F0000 /* JournalBuddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JournalBuddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -237,6 +245,8 @@
 				A2000042233F0042 /* JournalListViewModel.swift */,
 				A2000043233F0043 /* GoalsViewModel.swift */,
 				A2000044233F0044 /* VoiceChatViewModel.swift */,
+				A2000045233F0045 /* GamificationViewModel.swift */,
+				A2000046233F0046 /* ChatHistoryViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -249,6 +259,8 @@
 				A5000063233F0063 /* Journal */,
 				A5000064233F0064 /* Goals */,
 				A5000065233F0065 /* VoiceChat */,
+				A5000066233F0066 /* Gamification */,
+				A5000067233F0067 /* ChatHistory */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -297,6 +309,22 @@
 				A2000058233F0058 /* GoalEditorView.swift */,
 			);
 			path = Goals;
+			sourceTree = "<group>";
+		};
+		A5000066233F0066 /* Gamification */ = {
+			isa = PBXGroup;
+			children = (
+				A2000061233F0061 /* GamificationDashboardView.swift */,
+			);
+			path = Gamification;
+			sourceTree = "<group>";
+		};
+		A5000067233F0067 /* ChatHistory */ = {
+			isa = PBXGroup;
+			children = (
+				A2000062233F0062 /* ChatHistoryView.swift */,
+			);
+			path = ChatHistory;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -403,6 +431,10 @@
 				A1000058233F0058 /* GoalEditorView.swift in Sources */,
 				A1000059233F0059 /* VoiceChatView.swift in Sources */,
 				A1000060233F0060 /* AvatarView.swift in Sources */,
+				A1000045233F0045 /* GamificationViewModel.swift in Sources */,
+				A1000046233F0046 /* ChatHistoryViewModel.swift in Sources */,
+				A1000061233F0061 /* GamificationDashboardView.swift in Sources */,
+				A1000062233F0062 /* ChatHistoryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
