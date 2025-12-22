@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.config import settings
+from app.core.middleware import ObservabilityMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(ObservabilityMiddleware)
 
 app.include_router(api_router, prefix="/api/v1")
 

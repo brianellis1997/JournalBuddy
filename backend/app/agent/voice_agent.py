@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from typing import Annotated, TypedDict, Literal, AsyncGenerator, List, Dict
 from uuid import UUID
 
@@ -18,6 +19,7 @@ from app.crud.entry import entry_crud
 from app.models.goal import GoalProgressUpdate
 from app.services.embedding import embedding_service
 from app.services.vector_search import search_by_text
+from app.services.llm_metrics import LLMMetricsTracker
 
 logger = logging.getLogger(__name__)
 
@@ -511,6 +513,13 @@ class VoiceAgent:
         tool_handler = VoiceAgentTools(db, user_id, session_id, journal_type=journal_type)
         await tool_handler.load_goals()
 
+        metrics_tracker = LLMMetricsTracker(
+            session_id=session_id,
+            user_id=user_id,
+            model=settings.groq_model,
+            prompt_type="journal" if is_journal else "freeform",
+        )
+
         goals, context = await self.get_context(db, user_id, user_message)
         tools = self._create_tools(tool_handler, is_journal=is_journal)
         llm_with_tools = self.llm.bind_tools(tools, tool_choice="auto")
@@ -549,11 +558,19 @@ class VoiceAgent:
 
         max_iterations = 5
         for iteration in range(max_iterations):
+            llm_start_time = time.perf_counter()
+            llm_success = True
+            llm_error = None
+            tool_calls_count = 0
+
             try:
                 logger.info(f"Sending to LLM (iteration {iteration}), message count: {len(messages)}")
                 response = await llm_with_tools.ainvoke(messages)
-                logger.info(f"LLM response: content_len={len(response.content) if response.content else 0}, tool_calls={len(response.tool_calls) if response.tool_calls else 0}")
+                tool_calls_count = len(response.tool_calls) if response.tool_calls else 0
+                logger.info(f"LLM response: content_len={len(response.content) if response.content else 0}, tool_calls={tool_calls_count}")
             except Exception as e:
+                llm_success = False
+                llm_error = str(e)
                 error_str = str(e)
                 logger.error(f"LLM error on iteration {iteration}: {e}")
 
@@ -692,6 +709,15 @@ class VoiceAgent:
             end_conversation_called = False
             farewell_message = ""
 
+            llm_latency_ms = (time.perf_counter() - llm_start_time) * 1000
+            await metrics_tracker.log_tool_call_sync(
+                tool_name="_llm_call",
+                tool_args={"iteration": iteration, "message_count": len(messages)},
+                latency_ms=llm_latency_ms,
+                success=True,
+                result_preview=f"tool_calls={tool_calls_count}",
+            )
+
             for tool_call in response.tool_calls:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
@@ -700,28 +726,49 @@ class VoiceAgent:
 
                 yield f"__TOOL_START:{tool_name}__"
 
-                if tool_name == "update_goal_progress":
-                    result = await tool_handler.update_goal_progress(**tool_args)
-                elif tool_name == "save_session_summary":
-                    result = await tool_handler.save_session_summary(**tool_args)
-                elif tool_name == "create_journal_entry":
-                    result = await tool_handler.create_journal_entry(**tool_args)
-                elif tool_name == "recall_memory":
-                    result = await tool_handler.recall_memory(**tool_args)
-                elif tool_name == "express_emotion":
-                    result = await tool_handler.express_emotion(**tool_args)
-                    if result.startswith("EMOTION:"):
-                        emotion = result.replace("EMOTION:", "")
-                        yield f"__EMOTION:{emotion}__"
-                        result = f"Showing {emotion} expression"
-                elif tool_name == "end_conversation":
-                    result = await tool_handler.end_conversation(**tool_args)
-                    if result.startswith("END_CONVERSATION:"):
-                        end_conversation_called = True
-                        farewell_message = result.replace("END_CONVERSATION:", "")
-                        result = "Conversation ended"
-                else:
-                    result = "Unknown tool"
+                tool_start_time = time.perf_counter()
+                tool_success = True
+                tool_error = None
+                result = None
+
+                try:
+                    if tool_name == "update_goal_progress":
+                        result = await tool_handler.update_goal_progress(**tool_args)
+                    elif tool_name == "save_session_summary":
+                        result = await tool_handler.save_session_summary(**tool_args)
+                    elif tool_name == "create_journal_entry":
+                        result = await tool_handler.create_journal_entry(**tool_args)
+                    elif tool_name == "recall_memory":
+                        result = await tool_handler.recall_memory(**tool_args)
+                    elif tool_name == "express_emotion":
+                        result = await tool_handler.express_emotion(**tool_args)
+                        if result.startswith("EMOTION:"):
+                            emotion = result.replace("EMOTION:", "")
+                            yield f"__EMOTION:{emotion}__"
+                            result = f"Showing {emotion} expression"
+                    elif tool_name == "end_conversation":
+                        result = await tool_handler.end_conversation(**tool_args)
+                        if result.startswith("END_CONVERSATION:"):
+                            end_conversation_called = True
+                            farewell_message = result.replace("END_CONVERSATION:", "")
+                            result = "Conversation ended"
+                    else:
+                        result = "Unknown tool"
+                except Exception as tool_err:
+                    tool_success = False
+                    tool_error = str(tool_err)
+                    result = f"Error: {tool_err}"
+                    logger.error(f"Tool {tool_name} error: {tool_err}")
+
+                tool_latency_ms = (time.perf_counter() - tool_start_time) * 1000
+                await metrics_tracker.log_tool_call_sync(
+                    tool_name=tool_name,
+                    tool_args=tool_args,
+                    latency_ms=tool_latency_ms,
+                    success=tool_success,
+                    error_message=tool_error,
+                    result_preview=str(result)[:200] if result else None,
+                )
 
                 yield f"__TOOL_DONE:{tool_name}__"
 
