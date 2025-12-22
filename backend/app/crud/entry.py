@@ -22,11 +22,15 @@ class EntryCRUD:
         skip: int = 0,
         limit: int = 20,
         search: Optional[str] = None,
+        journal_type: Optional[str] = None,
     ) -> tuple[List[Entry], int]:
         query = select(Entry).where(Entry.user_id == user_id)
 
         if search:
             query = query.where(Entry.content.ilike(f"%{search}%"))
+
+        if journal_type:
+            query = query.where(Entry.journal_type == journal_type)
 
         count_query = select(func.count()).select_from(query.subquery())
         total_result = await db.execute(count_query)

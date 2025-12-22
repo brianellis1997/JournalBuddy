@@ -24,10 +24,11 @@ async def list_entries(
     page: int = 1,
     limit: int = 20,
     search: Optional[str] = None,
+    journal_type: Optional[str] = None,
 ):
     skip = (page - 1) * limit
     entries, total = await entry_crud.get_multi(
-        db, current_user.id, skip=skip, limit=limit, search=search
+        db, current_user.id, skip=skip, limit=limit, search=search, journal_type=journal_type
     )
     return EntryListResponse(
         entries=entries,

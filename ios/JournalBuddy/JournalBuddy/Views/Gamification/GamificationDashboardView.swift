@@ -318,8 +318,9 @@ struct AchievementCard: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Text(achievement.icon)
+            Image(systemName: sfSymbolForIcon(achievement.icon))
                 .font(.largeTitle)
+                .foregroundColor(isUnlocked ? .xpGold : .gray)
                 .opacity(isUnlocked ? 1 : 0.4)
 
             Text(achievement.name)
@@ -342,6 +343,25 @@ struct AchievementCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isUnlocked ? Color.xpGold.opacity(0.3) : Color.clear, lineWidth: 1)
         )
+    }
+
+    private func sfSymbolForIcon(_ icon: String) -> String {
+        switch icon {
+        case "pencil": return "pencil.circle.fill"
+        case "book": return "book.fill"
+        case "book-open": return "book.pages.fill"
+        case "trophy": return "trophy.fill"
+        case "flame": return "flame.fill"
+        case "fire": return "flame.circle.fill"
+        case "medal": return "medal.fill"
+        case "target": return "target"
+        case "check-circle": return "checkmark.circle.fill"
+        case "star": return "star.fill"
+        case "sunrise": return "sunrise.fill"
+        case "moon": return "moon.stars.fill"
+        case "crown": return "crown.fill"
+        default: return "star.fill"
+        }
     }
 }
 
